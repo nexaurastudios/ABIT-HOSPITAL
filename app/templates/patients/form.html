@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit Patient' if patient else 'Register New Patient' }} - Apex Health{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-9">
+    <div class="card border-0 shadow-sm rounded-3">
+      <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+        <h5 class="fw-bold mb-0 text-dark">
+          <i class="bi bi-person-plus me-2 text-primary"></i>{{ 'Edit Patient Profile' if patient else 'Register New Patient' }}
+        </h5>
+        <span class="badge bg-light text-secondary border font-monospace">
+          {{ patient.patient_id if patient else suggested_id }}
+        </span>
+      </div>
+      <div class="card-body p-4">
+        <form method="POST" action="{{ url_for('patients.edit_patient', id=patient.id) if patient else url_for('patients.create_patient') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+          <div class="row mb-3">
+            <div class="col-md-6 mb-3 mb-md-0">
+              <label class="form-label small fw-semibold">Full Patient Name <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="full_name" value="{{ patient.full_name if patient else '' }}" placeholder="e.g., Jennifer Martinez" required>
+            </div>
+            <div class="col-md-3 mb-3 mb-md-0">
+              <label class="form-label small fw-semibold">Age <span class="text-danger">*</span></label>
+              <input type="number" class="form-control" name="age" min="0" max="130" value="{{ patient.age if patient else '' }}" placeholder="45" required>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small fw-semibold">Date of Birth</label>
+              <input type="date" class="form-control" name="dob" value="{{ patient.dob.strftime('%Y-%m-%d') if patient and patient.dob else '' }}">
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-md-4 mb-3 mb-md-0">
+              <label class="form-label small fw-semibold">Gender <span class="text-danger">*</span></label>
+              <select class="form-select" name="gender" required>
+                <option value="Male" {{ 'selected' if patient and patient.gender == 'Male' else '' }}>Male</option>
+                <option value="Female" {{ 'selected' if patient and patient.gender == 'Female' else '' }}>Female</option>
+                <option value="Other" {{ 'selected' if patient and patient.gender == 'Other' else '' }}>Other</option>
+              </select>
+            </div>
+            <div class="col-md-4 mb-3 mb-md-0">
+              <label class="form-label small fw-semibold">Primary Contact Phone <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="phone" value="{{ patient.phone if patient else '' }}" placeholder="+1 555-0199" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small fw-semibold">Blood Group <span class="text-danger">*</span></label>
+              <select class="form-select" name="blood_group" required>
+                {% for bg in ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] %}
+                  <option value="{{ bg }}" {{ 'selected' if patient and patient.blood_group == bg else '' }}>{{ bg }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-md-6 mb-3 mb-md-0">
+              <label class="form-label small fw-semibold">Email Address</label>
+              <input type="email" class="form-control" name="email" value="{{ patient.email if patient else '' }}" placeholder="patient@example.com">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">Emergency Contact Phone</label>
+              <input type="text" class="form-control" name="emergency_contact" value="{{ patient.emergency_contact if patient else '' }}" placeholder="+1 555-0188 (Family / Relative)">
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-md-6 mb-3 mb-md-0">
+              <label class="form-label small fw-semibold">Assigned Specialty Department</label>
+              <select class="form-select" name="assigned_department_id">
+                <option value="">General OPD (No Specialty)</option>
+                {% for d in departments %}
+                  <option value="{{ d.id }}" {{ 'selected' if patient and patient.assigned_department_id == d.id else '' }}>{{ d.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">Residential Address</label>
+              <input type="text" class="form-control" name="address" value="{{ patient.address if patient else '' }}" placeholder="Street, City, State, ZIP">
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+            <a href="{{ url_for('patients.list_patients') }}" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary px-4">
+              <i class="bi bi-check2 me-1"></i>{{ 'Save Changes' if patient else 'Register Patient' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

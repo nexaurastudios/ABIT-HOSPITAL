@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block title %}Medical Staff Directory - Apex Health{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+  <div>
+    <h4 class="fw-bold text-dark mb-1">Doctor Management &amp; Availability</h4>
+    <p class="text-muted small mb-0">Monitor clinical staffing, availability statuses, duty schedules, and workload.</p>
+  </div>
+  <a href="{{ url_for('doctors.create_doctor') }}" class="btn btn-primary shadow-sm">
+    <i class="bi bi-person-plus me-1"></i>Add New Doctor
+  </a>
+</div>
+
+<!-- Availability Status Summary Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-md-3 col-sm-6">
+    <div class="card border-0 shadow-sm p-3">
+      <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem;">Total Medical Staff</small>
+      <div class="fw-bold fs-4 text-dark mt-1">{{ metrics.total }}</div>
+      <small class="text-muted">Registered Clinicians</small>
+    </div>
+  </div>
+  <div class="col-md-3 col-sm-6">
+    <div class="card border-0 shadow-sm p-3">
+      <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem;">Available Now</small>
+      <div class="fw-bold fs-4 text-success mt-1"><i class="bi bi-circle-fill fs-6 me-1"></i>{{ metrics.available }}</div>
+      <small class="text-muted">Ready for Consultations</small>
+    </div>
+  </div>
+  <div class="col-md-3 col-sm-6">
+    <div class="card border-0 shadow-sm p-3">
+      <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem;">Currently Busy</small>
+      <div class="fw-bold fs-4 text-warning mt-1"><i class="bi bi-clock-history fs-6 me-1"></i>{{ metrics.busy }}</div>
+      <small class="text-muted">In Consultation / Surgery</small>
+    </div>
+  </div>
+  <div class="col-md-3 col-sm-6">
+    <div class="card border-0 shadow-sm p-3">
+      <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem;">On Leave</small>
+      <div class="fw-bold fs-4 text-secondary mt-1">{{ metrics.on_leave }}</div>
+      <small class="text-muted">Off-Duty / Leave</small>
+    </div>
+  </div>
+</div>
+
+<!-- Filter Bar -->
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body p-3">
+    <form method="GET" action="{{ url_for('doctors.list_doctors') }}" class="row g-2 align-items-center">
+      <div class="col-md-4">
+        <div class="input-group input-group-sm">
+          <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+          <input type="text" class="form-control border-start-0" name="search" value="{{ search }}" placeholder="Search doctor name or specialization...">
+        </div>
+      </div>
+      <div class="col-md-4">
+        <select class="form-select form-select-sm" name="department_id">
+          <option value="">All Departments</option>
+          {% for d in departments %}
+            <option value="{{ d.id }}" {{ 'selected' if dept_id == d.id else '' }}>{{ d.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <select class="form-select form-select-sm" name="status">
+          <option value="">All Availability Statuses</option>
+          <option value="Available" {{ 'selected' if status_filter == 'Available' else '' }}>Available</option>
+          <option value="Busy" {{ 'selected' if status_filter == 'Busy' else '' }}>Busy</option>
+          <option value="On Leave" {{ 'selected' if status_filter == 'On Leave' else '' }}>On Leave</option>
+          <option value="Not Available" {{ 'selected' if status_filter == 'Not Available' else '' }}>Not Available</option>
+        </select>
+      </div>
+      <div class="col-md-1 d-flex gap-1">
+        <button type="submit" class="btn btn-sm btn-primary w-100">Filter</button>
+        {% if search or dept_id or status_filter %}
+          <a href="{{ url_for('doctors.list_doctors') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-x"></i></a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Doctors Grid -->
+<div class="row g-3">
+  {% for doc in doctors %}
+    <div class="col-lg-4 col-md-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body p-4">
+          <div class="d-flex justify-content-between align-items-start mb-3">
+            <div class="d-flex align-items-center gap-2">
+              <div class="rounded-circle bg-light border text-primary d-flex align-items-center justify-content-center" style="width: 44px; height: 44px; font-weight: 700;">
+                Dr
+              </div>
+              <div>
+                <h6 class="fw-bold text-dark mb-0">Dr. {{ doc.name }}</h6>
+                <small class="text-muted font-monospace">{{ doc.doctor_id }}</small>
+              </div>
+            </div>
+            <!-- Quick Availability Dropdown Form -->
+            <form method="POST" action="{{ url_for('doctors.toggle_status', id=doc.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <select class="form-select form-select-sm py-0 ps-2 pe-4" name="availability_status" onchange="this.form.submit();" style="font-size: 0.75rem; border-radius: 20px; font-weight: 600; background-color: {% if doc.availability_status == 'Available' %}#dcfce7; color: #15803d;{% elif doc.availability_status == 'Busy' %}#fef3c7; color: #b45309;{% else %}#f1f5f9; color: #475569;{% endif %}">
+                <option value="Available" {{ 'selected' if doc.availability_status == 'Available' else '' }}>Available</option>
+                <option value="Busy" {{ 'selected' if doc.availability_status == 'Busy' else '' }}>Busy</option>
+                <option value="On Leave" {{ 'selected' if doc.availability_status == 'On Leave' else '' }}>On Leave</option>
+                <option value="Not Available" {{ 'selected' if doc.availability_status == 'Not Available' else '' }}>Not Available</option>
+              </select>
+            </form>
+          </div>
+
+          <div class="mb-2">
+            <span class="badge bg-primary-subtle text-primary">{{ doc.department.name }}</span>
+            <span class="text-muted small ms-1">&bull; {{ doc.specialization }}</span>
+          </div>
+
+          <div class="small text-secondary mb-3">
+            <div><i class="bi bi-mortarboard me-2"></i>{{ doc.qualification }} ({{ doc.experience_years }} yrs exp)</div>
+            <div><i class="bi bi-clock me-2"></i>Duty: {{ doc.duty_start_time.strftime('%H:%M') }} - {{ doc.duty_end_time.strftime('%H:%M') }}</div>
+            <div><i class="bi bi-telephone me-2"></i>{{ doc.phone }}</div>
+          </div>
+
+          <div class="pt-3 border-top d-flex justify-content-between align-items-center">
+            <small class="text-muted">Capacity: {{ doc.max_patient_capacity }} / day</small>
+            <div class="d-flex gap-1">
+              <a href="{{ url_for('doctors.view_doctor', id=doc.id) }}" class="btn btn-sm btn-light border py-1 px-2" title="View Doctor">
+                <i class="bi bi-eye"></i> Details
+              </a>
+              <a href="{{ url_for('doctors.edit_doctor', id=doc.id) }}" class="btn btn-sm btn-light border py-1 px-2" title="Edit Doctor">
+                <i class="bi bi-pencil"></i>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% else %}
+    <div class="col-12">
+      <div class="card border-0 shadow-sm p-5 text-center text-muted">
+        <i class="bi bi-person-badge fs-1 text-secondary opacity-50 d-block mb-2"></i>
+        No doctors found matching the search criteria.
+      </div>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}
+

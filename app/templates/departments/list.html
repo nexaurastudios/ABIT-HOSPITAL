@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Departments - Apex Health{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+  <div>
+    <h4 class="fw-bold text-dark mb-1">Hospital Department Management</h4>
+    <p class="text-muted small mb-0">Overview of 10 specialized clinical divisions, doctor staffing, beds, and patient workloads.</p>
+  </div>
+  <a href="{{ url_for('departments.create_department') }}" class="btn btn-primary shadow-sm">
+    <i class="bi bi-plus-circle me-1"></i>Add Department
+  </a>
+</div>
+
+<!-- Department Cards Grid -->
+<div class="row g-3">
+  {% for item in dept_stats %}
+    {% set d = item.dept %}
+    <div class="col-lg-6 col-xl-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body p-4">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <div>
+              <span class="badge bg-primary-subtle text-primary font-monospace fw-bold mb-1">{{ d.code }}</span>
+              <h5 class="fw-bold text-dark mb-0">
+                <a href="{{ url_for('departments.view_department', id=d.id) }}" class="text-dark text-decoration-none">
+                  {{ d.name }}
+                </a>
+              </h5>
+            </div>
+            <a href="{{ url_for('departments.edit_department', id=d.id) }}" class="btn btn-sm btn-light border py-1 px-2" title="Edit Department">
+              <i class="bi bi-pencil"></i>
+            </a>
+          </div>
+
+          <p class="text-muted small mb-3">
+            <i class="bi bi-geo-alt me-1 text-secondary"></i>{{ d.floor or 'Main Hospital Pavilion' }}<br>
+            <i class="bi bi-person-check me-1 text-secondary"></i>Head: {{ d.head_of_department or 'Dr. Lead Physician' }}
+          </p>
+
+          <div class="row g-2 text-center pt-3 border-top mb-3">
+            <div class="col-4">
+              <div class="p-2 bg-light rounded">
+                <small class="text-muted d-block text-uppercase" style="font-size: 0.68rem;">Doctors</small>
+                <span class="fw-bold fs-6 text-dark">{{ item.total_docs }}</span>
+                <small class="text-success d-block" style="font-size: 0.65rem;">{{ item.avail_docs }} Avail</small>
+              </div>
+            </div>
+            <div class="col-4">
+              <div class="p-2 bg-light rounded">
+                <small class="text-muted d-block text-uppercase" style="font-size: 0.68rem;">Beds</small>
+                <span class="fw-bold fs-6 text-dark">{{ item.total_beds }}</span>
+                <small class="text-danger d-block" style="font-size: 0.65rem;">{{ item.occupied_beds }} Occ</small>
+              </div>
+            </div>
+            <div class="col-4">
+              <div class="p-2 bg-light rounded">
+                <small class="text-muted d-block text-uppercase" style="font-size: 0.68rem;">Avg Wait</small>
+                <span class="fw-bold fs-6 text-primary">{{ item.avg_wait }}m</span>
+                <small class="text-muted d-block" style="font-size: 0.65rem;">Queue Time</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-between align-items-center">
+            <small class="text-muted">Today: <strong>{{ item.today_appts }}</strong> visits</small>
+            <a href="{{ url_for('departments.view_department', id=d.id) }}" class="btn btn-sm btn-outline-primary py-1 px-3">
+              Department Hub &rarr;
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}
+

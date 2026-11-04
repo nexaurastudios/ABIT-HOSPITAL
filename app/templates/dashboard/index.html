@@ -1,0 +1,371 @@
+{% extends "base.html" %}
+{% block title %}Hospital Analytics Dashboard - Apex Health{% endblock %}
+
+{% block content %}
+<!-- Dashboard Header & Department Filter Bar -->
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+  <div>
+    <h4 class="fw-bold text-dark mb-1">Operational Analytics &amp; Resource Dashboard</h4>
+    <p class="text-muted small mb-0">Dynamic real-time monitoring of hospital patient flow, staff availability, and capacity.</p>
+  </div>
+  <div class="d-flex align-items-center gap-2">
+    <div class="input-group input-group-sm" style="width: 250px;">
+      <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-filter"></i></span>
+      <select class="form-select border-start-0" id="dashboardDeptFilter">
+        <option value="">All Hospital Departments</option>
+        {% for d in departments %}
+          <option value="{{ d.id }}">{{ d.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <a href="{{ url_for('ml.index') }}" class="btn btn-sm btn-outline-primary shadow-sm">
+      <i class="bi bi-cpu me-1"></i>ML Forecasts
+    </a>
+  </div>
+</div>
+
+<!-- 12 Dynamic KPI Cards directly from MySQL -->
+<div class="row g-3 mb-4">
+  <!-- Card 1: Total Patients -->
+  <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+    <div class="kpi-card h-100">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="kpi-label">Total Patients</span>
+        <div class="kpi-icon bg-primary-subtle text-primary"><i class="bi bi-people"></i></div>
+      </div>
+      <div class="kpi-value">{{ kpi.total_patients }}</div>
+      <small class="text-muted"><i class="bi bi-person-check text-success me-1"></i>Active Records</small>
+    </div>
+  </div>
+
+  <!-- Card 2: Total Doctors -->
+  <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+    <div class="kpi-card h-100">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="kpi-label">Total Doctors</span>
+        <div class="kpi-icon bg-info-subtle text-info"><i class="bi bi-person-badge"></i></div>
+      </div>
+      <div class="kpi-value">{{ kpi.total_doctors }}</div>
+      <small class="text-muted"><i class="bi bi-hospital me-1"></i>10 Departments</small>
+    </div>
+  </div>
+
+  <!-- Card 3: Available Doctors -->
+  <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+    <div class="kpi-card h-100">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="kpi-label">Available Doctors</span>
+        <div class="kpi-icon bg-success-subtle text-success"><i class="bi bi-shield-check"></i></div>
+      </div>
+      <div class="kpi-value text-success">{{ kpi.available_doctors }}</div>
+      <small class="text-muted"><i class="bi bi-check2-circle text-success me-1"></i>On Duty Now</small>
+    </div>
+  </div>
+
+  <!-- Card 4: Total Appointments -->
+  <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+    <div class="kpi-card h-100">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="kpi-label">Appointments</span>
+        <div class="kpi-icon bg-secondary-subtle text-secondary"><i class="bi bi-calendar2-range"></i></div>
+      </div>
+      <div class="kpi-value">{{ kpi.total_appointments }}</div>
+      <small class="text-muted">Total Scheduled</small>
+    </div>
+  </div>
+
+  <!-- Card 5: Today's Appointments -->
+  <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+    <div class="kpi-card h-100">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="kpi-label">Today's Visits</span>
+        <div class="kpi-icon bg-primary-subtle text-primary"><i class="bi bi-calendar-event"></i></div>
+      </div>
+      <div class="kpi-value text-primary">{{ kpi.todays_appointments }}</div>
+      <small class="text-muted">Current Queue</small>
+    </div>
+  </div>
+
+  <!-- Card 6: Total Hospital Beds -->
+  <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+    <div class="kpi-card h-100">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="kpi-label">Total Beds</span>
+        <div class="kpi-icon bg-dark-subtle text-dark"><i class="bi bi-hospital-fill"></i></div>
+      </div>
+      <div class="kpi-value">{{ kpi.total_beds }}</div>
+      <small class="text-muted">Wards &amp; ICU</small>
+    </div>
+  </div>
+
+  <!-- Card 7: Occupied Beds -->
+  <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+    <div class="kpi-card h-100">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="kpi-label">Occupied Beds</span>
+        <div class="kpi-icon bg-danger-subtle text-danger"><i class="bi bi-heart-pulse"></i></div>
+      </div>
+      <div class="kpi-value text-danger">{{ kpi.occupied_beds }}</div>
+      <small class="text-muted">Inpatient Beds</small>
+    </div>
+  </div>
+
+  <!-- Card 8: Available Beds -->
+  <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+    <div class="kpi-card h-100">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="kpi-label">Available Beds</span>
+        <div class="kpi-icon bg-success-subtle text-success"><i class="bi bi-door-open"></i></div>
+      </div>
+      <div class="kpi-value text-success">{{ kpi.available_beds }}</div>
+      <small class="text-muted">Ready to Allocate</small>
+    </div>
+  </div>
+
+  <!-- Card 9: Bed Occupancy Percentage -->
+  <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+    <div class="kpi-card h-100">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="kpi-label">Bed Occupancy</span>
+        <div class="kpi-icon bg-warning-subtle text-warning"><i class="bi bi-pie-chart"></i></div>
+      </div>
+      <div class="kpi-value {{ 'text-danger' if kpi.bed_occupancy_pct >= 85 else 'text-dark' }}">{{ kpi.bed_occupancy_pct }}%</div>
+      <small class="text-muted">Target &lt; 85%</small>
+    </div>
+  </div>
+
+  <!-- Card 10: Average Waiting Time -->
+  <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+    <div class="kpi-card h-100">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="kpi-label">Avg Waiting Time</span>
+        <div class="kpi-icon bg-primary-subtle text-primary"><i class="bi bi-stopwatch"></i></div>
+      </div>
+      <div class="kpi-value text-primary">{{ kpi.avg_waiting_time }} <span style="font-size: 0.9rem;">m</span></div>
+      <small class="text-muted">Arrival to Consult</small>
+    </div>
+  </div>
+
+  <!-- Card 11: Total Admissions -->
+  <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+    <div class="kpi-card h-100">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="kpi-label">Admissions</span>
+        <div class="kpi-icon bg-info-subtle text-info"><i class="bi bi-box-arrow-in-right"></i></div>
+      </div>
+      <div class="kpi-value">{{ kpi.total_admissions }}</div>
+      <small class="text-muted">Total Inpatients</small>
+    </div>
+  </div>
+
+  <!-- Card 12: Total Discharges -->
+  <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+    <div class="kpi-card h-100">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="kpi-label">Discharges</span>
+        <div class="kpi-icon bg-success-subtle text-success"><i class="bi bi-box-arrow-right"></i></div>
+      </div>
+      <div class="kpi-value text-success">{{ kpi.total_discharges }}</div>
+      <small class="text-muted">Recovered / Out</small>
+    </div>
+  </div>
+</div>
+
+<!-- Interactive Chart Grid -->
+<div class="row g-4 mb-4">
+  <!-- Chart 1: Daily Patient Registrations Trend -->
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <span class="fw-bold"><i class="bi bi-graph-up text-primary me-2"></i>Daily Patient Registrations Trend</span>
+        <span class="badge bg-light text-muted border">Past 14 Days</span>
+      </div>
+      <div class="card-body">
+        <div style="height: 280px;">
+          <canvas id="chartDailyRegistrations"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart 2: Doctor Availability Status -->
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <span class="fw-bold"><i class="bi bi-pie-chart text-success me-2"></i>Doctor Availability</span>
+        <span class="badge bg-light text-muted border">Real-Time</span>
+      </div>
+      <div class="card-body">
+        <div style="height: 280px;">
+          <canvas id="chartDoctorAvailability"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart 3: Department Patient Distribution -->
+  <div class="col-lg-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <span class="fw-bold"><i class="bi bi-bar-chart-line text-info me-2"></i>Department Patient Distribution</span>
+        <span class="badge bg-light text-muted border">By Volume</span>
+      </div>
+      <div class="card-body">
+        <div style="height: 270px;">
+          <canvas id="chartDeptDistribution"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart 4: Bed Occupancy by Bed Type -->
+  <div class="col-lg-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <span class="fw-bold"><i class="bi bi-hospital text-danger me-2"></i>Bed Occupancy vs Available</span>
+        <span class="badge bg-light text-muted border">Capacity Breakdown</span>
+      </div>
+      <div class="card-body">
+        <div style="height: 270px;">
+          <canvas id="chartBedOccupancy"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart 5: Department Average Waiting Times -->
+  <div class="col-lg-12">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <span class="fw-bold"><i class="bi bi-hourglass-split text-warning me-2"></i>Department-wise Average Waiting Times (Minutes)</span>
+        <a href="{{ url_for('waiting_time.index') }}" class="btn btn-sm btn-link text-decoration-none">In-Depth Analysis &rarr;</a>
+      </div>
+      <div class="card-body">
+        <div style="height: 260px;">
+          <canvas id="chartDeptWaitingTimes"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Hospital Activity Feeds -->
+<div class="row g-4">
+  <!-- Recent Patient Registrations -->
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <span class="fw-bold"><i class="bi bi-person-plus text-primary me-2"></i>Recent Patients</span>
+        <a href="{{ url_for('patients.list_patients') }}" class="small text-decoration-none">View All</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Patient</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in recent_patients %}
+              <tr>
+                <td>
+                  <div class="fw-semibold text-dark">{{ p.full_name }}</div>
+                  <small class="text-muted">{{ p.patient_id }} &bull; {{ p.blood_group }}</small>
+                </td>
+                <td>
+                  <span class="badge {% if p.status == 'Admitted' %}badge-occupied{% elif p.status == 'Discharged' %}badge-available{% else %}badge-scheduled{% endif %}">
+                    {{ p.status }}
+                  </span>
+                </td>
+                <td>
+                  <a href="{{ url_for('patients.view_patient', id=p.id) }}" class="btn btn-xs btn-outline-primary py-0 px-2" style="font-size: 0.75rem;">Profile</a>
+                </td>
+              </tr>
+            {% else %}
+              <tr><td colspan="3" class="text-center text-muted py-3">No patients registered</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Appointments -->
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <span class="fw-bold"><i class="bi bi-calendar-check text-success me-2"></i>Recent Appointments</span>
+        <a href="{{ url_for('appointments.list_appointments') }}" class="small text-decoration-none">View All</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Patient &amp; Doctor</th>
+              <th>Status</th>
+              <th>Time</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for a in recent_appointments %}
+              <tr>
+                <td>
+                  <div class="fw-semibold text-dark">{{ a.patient.full_name }}</div>
+                  <small class="text-muted">Dr. {{ a.doctor.name }}</small>
+                </td>
+                <td>
+                  <span class="badge {% if a.status == 'Completed' %}badge-available{% elif a.status == 'Waiting' %}badge-waiting{% elif a.status == 'Cancelled' %}badge-occupied{% else %}badge-scheduled{% endif %}">
+                    {{ a.status }}
+                  </span>
+                </td>
+                <td class="small text-muted">
+                  {{ a.appointment_date.strftime('%b %d') }}<br>{{ a.appointment_time.strftime('%H:%M') }}
+                </td>
+              </tr>
+            {% else %}
+              <tr><td colspan="3" class="text-center text-muted py-3">No appointments found</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Operational Activity Logs -->
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <span class="fw-bold"><i class="bi bi-activity text-danger me-2"></i>Operational Activity Log</span>
+        <a href="{{ url_for('notifications.activity_logs') }}" class="small text-decoration-none">View All</a>
+      </div>
+      <div class="card-body p-3">
+        <div class="timeline">
+          {% for log in recent_activities %}
+            <div class="d-flex align-items-start mb-3 pb-2 border-bottom">
+              <div class="p-1 rounded bg-light border text-primary me-2">
+                <i class="bi bi-arrow-right-short fs-6"></i>
+              </div>
+              <div class="flex-grow-1">
+                <div class="d-flex justify-content-between">
+                  <span class="fw-semibold small text-dark">{{ log.action }}</span>
+                  <small class="text-muted" style="font-size: 0.72rem;">{{ log.timestamp.strftime('%H:%M') }}</small>
+                </div>
+                <div class="text-muted" style="font-size: 0.8rem;">{{ log.details or log.module }}</div>
+              </div>
+            </div>
+          {% else %}
+            <div class="text-center text-muted py-3 small">No operational logs recorded yet</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dashboard-charts.js') }}"></script>
+{% endblock %}
+

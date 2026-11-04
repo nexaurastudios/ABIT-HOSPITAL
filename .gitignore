@@ -1,0 +1,31 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environment
+venv/
+env/
+.venv/
+
+# Environment Variables
+.env
+
+# Pytest / Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Joblib ML cache / temporary files
+*.tmp
+
+# Uploaded preview CSVs
+sample_data/temp_*
+
+# OS metadata
+.DS_Store
+
+# Backups and logs
+backups/
+*.log
+

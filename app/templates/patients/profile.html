@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+{% block title %}Patient Profile - {{ patient.full_name }}{% endblock %}
+
+{% block content %}
+<!-- Top Header & Actions -->
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+  <div class="d-flex align-items-center gap-3">
+    <div class="rounded-circle bg-primary-subtle text-primary d-flex align-items-center justify-content-center" style="width: 55px; height: 55px; font-size: 1.5rem; font-weight: 700;">
+      {{ patient.full_name[:1] }}
+    </div>
+    <div>
+      <div class="d-flex align-items-center gap-2">
+        <h4 class="fw-bold text-dark mb-0">{{ patient.full_name }}</h4>
+        <span class="badge {% if patient.status == 'Admitted' %}badge-occupied{% elif patient.status == 'Discharged' %}badge-available{% else %}badge-scheduled{% endif %}">
+          {{ patient.status }}
+        </span>
+        {% if patient.is_demo %}
+          <span class="badge bg-light text-secondary border">DEMO DATA</span>
+        {% endif %}
+      </div>
+      <p class="text-muted small mb-0 font-monospace">Patient ID: {{ patient.patient_id }} &bull; Registered {{ patient.registration_date.strftime('%B %d, %Y') if patient.registration_date else '' }}</p>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('appointments.create_appointment', patient_id=patient.id) }}" class="btn btn-sm btn-outline-primary shadow-sm">
+      <i class="bi bi-calendar-plus me-1"></i>Book Appointment
+    </a>
+    {% if patient.status != 'Admitted' %}
+      <a href="{{ url_for('admissions.create_admission', patient_id=patient.id) }}" class="btn btn-sm btn-outline-danger shadow-sm">
+        <i class="bi bi-door-open me-1"></i>Admit Inpatient
+      </a>
+    {% endif %}
+    <a href="{{ url_for('patients.edit_patient', id=patient.id) }}" class="btn btn-sm btn-outline-secondary shadow-sm">
+      <i class="bi bi-pencil me-1"></i>Edit
+    </a>
+    <button type="button" class="btn btn-sm btn-outline-danger shadow-sm" data-bs-toggle="modal" data-bs-target="#deletePatientModal">
+      <i class="bi bi-trash me-1"></i>Archive
+    </button>
+  </div>
+</div>
+
+<!-- Personal Details Summary Grid -->
+<div class="row g-3 mb-4">
+  <div class="col-md-3 col-sm-6">
+    <div class="card border-0 shadow-sm p-3 h-100">
+      <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem;">Demographics</small>
+      <div class="fw-bold fs-6 text-dark mt-1">{{ patient.age }} Years / {{ patient.gender }}</div>
+      <small class="text-muted">DOB: {{ patient.dob.strftime('%Y-%m-%d') if patient.dob else 'Not recorded' }}</small>
+    </div>
+  </div>
+  <div class="col-md-3 col-sm-6">
+    <div class="card border-0 shadow-sm p-3 h-100">
+      <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem;">Blood Group</small>
+      <div class="fw-bold fs-6 text-danger mt-1"><i class="bi bi-droplet-fill me-1"></i>{{ patient.blood_group }}</div>
+      <small class="text-muted">Emergency Profile</small>
+    </div>
+  </div>
+  <div class="col-md-3 col-sm-6">
+    <div class="card border-0 shadow-sm p-3 h-100">
+      <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem;">Contact Information</small>
+      <div class="fw-bold fs-6 text-dark mt-1">{{ patient.phone }}</div>
+      <small class="text-muted">{{ patient.email or 'No email recorded' }}</small>
+    </div>
+  </div>
+  <div class="col-md-3 col-sm-6">
+    <div class="card border-0 shadow-sm p-3 h-100">
+      <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem;">Assigned Clinic</small>
+      <div class="fw-bold fs-6 text-primary mt-1">{{ patient.assigned_department.name if patient.assigned_department else 'General OPD' }}</div>
+      <small class="text-muted">Address: {{ patient.address or 'Standard District' }}</small>
+    </div>
+  </div>
+</div>
+
+<!-- Complete History Tabs -->
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-white border-bottom p-0">
+    <ul class="nav nav-tabs card-header-tabs mx-3 mt-2" role="tablist">
+      <li class="nav-item">
+        <button class="nav-link active fw-semibold" data-bs-toggle="tab" data-bs-target="#tab-appointments" type="button">
+          <i class="bi bi-calendar2-check me-1"></i>Appointment History ({{ appointments|length }})
+        </button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link fw-semibold" data-bs-toggle="tab" data-bs-target="#tab-visits" type="button">
+          <i class="bi bi-stopwatch me-1"></i>Consultations &amp; Waiting Time ({{ visits|length }})
+        </button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link fw-semibold" data-bs-toggle="tab" data-bs-target="#tab-admissions" type="button">
+          <i class="bi bi-hospital me-1"></i>Inpatient Admissions ({{ admissions|length }})
+        </button>
+      </li>
+    </ul>
+  </div>
+
+  <div class="card-body p-0">
+    <div class="tab-content">
+      <!-- 1. Appointments Tab -->
+      <div class="tab-pane fade show active p-3" id="tab-appointments">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Appointment ID</th>
+                <th>Doctor</th>
+                <th>Department</th>
+                <th>Date &amp; Time</th>
+                <th>Status</th>
+                <th>Reason</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for a in appointments %}
+                <tr>
+                  <td class="font-monospace fw-semibold">{{ a.appointment_id }}</td>
+                  <td>Dr. {{ a.doctor.name }}</td>
+                  <td>{{ a.department.name }}</td>
+                  <td>{{ a.appointment_date.strftime('%Y-%m-%d') }} at {{ a.appointment_time.strftime('%H:%M') }}</td>
+                  <td><span class="badge badge-scheduled">{{ a.status }}</span></td>
+                  <td>{{ a.reason or 'General checkup' }}</td>
+                </tr>
+              {% else %}
+                <tr><td colspan="6" class="text-center text-muted py-4">No appointment records for this patient.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 2. Visits & Waiting Time Tab -->
+      <div class="tab-pane fade p-3" id="tab-visits">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Visit ID</th>
+                <th>Doctor</th>
+                <th>Visit Date</th>
+                <th>Arrival</th>
+                <th>Consult Start</th>
+                <th>Waiting Time</th>
+                <th>Duration</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for v in visits %}
+                <tr>
+                  <td class="font-monospace fw-semibold">{{ v.visit_id }}</td>
+                  <td>Dr. {{ v.doctor.name }}</td>
+                  <td>{{ v.visit_date.strftime('%Y-%m-%d') }}</td>
+                  <td>{{ v.arrival_time.strftime('%H:%M') if v.arrival_time else '-' }}</td>
+                  <td>{{ v.consultation_start_time.strftime('%H:%M') if v.consultation_start_time else '-' }}</td>
+                  <td>
+                    {% if v.waiting_time_minutes is not none %}
+                      <span class="fw-bold text-primary">{{ v.waiting_time_minutes }} mins</span>
+                    {% else %}
+                      <span class="text-muted">Incomplete</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if v.consultation_duration_minutes is not none %}
+                      {{ v.consultation_duration_minutes }} mins
+                    {% else %}
+                      <span class="text-muted">-</span>
+                    {% endif %}
+                  </td>
+                  <td><span class="badge bg-light text-dark border">{{ v.status }}</span></td>
+                </tr>
+              {% else %}
+                <tr><td colspan="8" class="text-center text-muted py-4">No clinic visits recorded for this patient.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 3. Admissions Tab -->
+      <div class="tab-pane fade p-3" id="tab-admissions">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Admission ID</th>
+                <th>Assigned Bed</th>
+                <th>Department</th>
+                <th>Doctor</th>
+                <th>Admission Date</th>
+                <th>Discharge Date</th>
+                <th>Status</th>
+                <th>Reason</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for adm in admissions %}
+                <tr>
+                  <td class="font-monospace fw-semibold">{{ adm.admission_id }}</td>
+                  <td><span class="badge bg-light text-dark border">{{ adm.bed.bed_id }}</span></td>
+                  <td>{{ adm.department.name }}</td>
+                  <td>Dr. {{ adm.doctor.name }}</td>
+                  <td>{{ adm.admission_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                  <td>{{ adm.discharge_date.strftime('%Y-%m-%d %H:%M') if adm.discharge_date else '<span class="text-success fw-bold">Active Inpatient</span>'|safe }}</td>
+                  <td>
+                    <span class="badge {% if adm.status == 'Active' %}badge-occupied{% else %}badge-available{% endif %}">
+                      {{ adm.status }}
+                    </span>
+                  </td>
+                  <td>{{ adm.admission_reason }}</td>
+                </tr>
+              {% else %}
+                <tr><td colspan="8" class="text-center text-muted py-4">No inpatient admission history recorded.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Delete / Archive Confirmation -->
+<div class="modal fade" id="deletePatientModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title"><i class="bi bi-exclamation-triangle me-2"></i>Archive Patient Record</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <p>Are you sure you want to delete or archive the record for <strong>{{ patient.full_name }}</strong> (ID: {{ patient.patient_id }})?</p>
+        <div class="alert alert-warning small mb-0">
+          Note: Patients currently admitted to an active hospital bed cannot be removed until discharged.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <form method="POST" action="{{ url_for('patients.delete_patient', id=patient.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-danger">Confirm Delete</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

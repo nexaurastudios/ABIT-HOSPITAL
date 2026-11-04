@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit Department' if department else 'New Department' }} - Apex Health{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <div class="card border-0 shadow-sm rounded-3">
+      <div class="card-header bg-white border-bottom py-3">
+        <h5 class="fw-bold mb-0 text-dark">
+          <i class="bi bi-building me-2 text-primary"></i>{{ 'Edit Department Information' if department else 'Create New Department' }}
+        </h5>
+      </div>
+      <div class="card-body p-4">
+        <form method="POST" action="{{ url_for('departments.edit_department', id=department.id) if department else url_for('departments.create_department') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+          <div class="row mb-3">
+            <div class="col-md-8 mb-3 mb-md-0">
+              <label class="form-label small fw-semibold">Department Name <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="name" value="{{ department.name if department else '' }}" placeholder="e.g., Cardiology" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small fw-semibold">Code (Unique) <span class="text-danger">*</span></label>
+              <input type="text" class="form-control font-monospace" name="code" value="{{ department.code if department else '' }}" placeholder="CARD" {{ 'readonly' if department else 'required' }}>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-md-6 mb-3 mb-md-0">
+              <label class="form-label small fw-semibold">Head of Department</label>
+              <input type="text" class="form-control" name="head_of_department" value="{{ department.head_of_department if department else '' }}" placeholder="Dr. Arthur Vance">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">Floor / Physical Location</label>
+              <input type="text" class="form-control" name="floor" value="{{ department.floor if department else '' }}" placeholder="Floor 3, East Wing">
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Department Phone / Extension</label>
+            <input type="text" class="form-control" name="phone" value="{{ department.phone if department else '' }}" placeholder="ext. 301">
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label small fw-semibold">Description</label>
+            <textarea class="form-control" name="description" rows="3" placeholder="Clinical division providing comprehensive diagnosis and inpatient care...">{{ department.description if department else '' }}</textarea>
+          </div>
+
+          <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+            <a href="{{ url_for('departments.list_departments') }}" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary px-4">
+              <i class="bi bi-check2 me-1"></i>{{ 'Update Department' if department else 'Save Department' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

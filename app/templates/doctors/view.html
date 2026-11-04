@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% block title %}Dr. {{ doctor.name }} - Staff Profile{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+  <div class="d-flex align-items-center gap-3">
+    <div class="rounded-circle bg-primary-subtle text-primary d-flex align-items-center justify-content-center" style="width: 55px; height: 55px; font-size: 1.5rem; font-weight: 700;">
+      Dr
+    </div>
+    <div>
+      <div class="d-flex align-items-center gap-2">
+        <h4 class="fw-bold text-dark mb-0">Dr. {{ doctor.name }}</h4>
+        <span class="badge {% if doctor.availability_status == 'Available' %}badge-available{% elif doctor.availability_status == 'Busy' %}badge-busy{% else %}badge-leave{% endif %}">
+          {{ doctor.availability_status }}
+        </span>
+      </div>
+      <p class="text-muted small mb-0 font-monospace">{{ doctor.doctor_id }} &bull; {{ doctor.specialization }} ({{ doctor.department.name }})</p>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('doctors.edit_doctor', id=doctor.id) }}" class="btn btn-sm btn-outline-secondary shadow-sm">
+      <i class="bi bi-pencil me-1"></i>Edit Profile
+    </a>
+    <button type="button" class="btn btn-sm btn-outline-danger shadow-sm" data-bs-toggle="modal" data-bs-target="#deleteDoctorModal">
+      <i class="bi bi-trash me-1"></i>Deactivate
+    </button>
+  </div>
+</div>
+
+<!-- Doctor Metrics Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-md-3 col-sm-6">
+    <div class="card border-0 shadow-sm p-3 h-100">
+      <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem;">Duty Hours</small>
+      <div class="fw-bold fs-6 text-dark mt-1">{{ doctor.duty_start_time.strftime('%H:%M') }} - {{ doctor.duty_end_time.strftime('%H:%M') }}</div>
+      <small class="text-muted">Standard Shift</small>
+    </div>
+  </div>
+  <div class="col-md-3 col-sm-6">
+    <div class="card border-0 shadow-sm p-3 h-100">
+      <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem;">Today's Patient Queue</small>
+      <div class="fw-bold fs-6 text-primary mt-1">{{ todays_appointments|length }} / {{ doctor.max_patient_capacity }}</div>
+      <small class="text-muted">Max Capacity: {{ doctor.max_patient_capacity }}</small>
+    </div>
+  </div>
+  <div class="col-md-3 col-sm-6">
+    <div class="card border-0 shadow-sm p-3 h-100">
+      <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem;">Lifetime Patients Handled</small>
+      <div class="fw-bold fs-6 text-success mt-1">{{ total_patients_handled }}</div>
+      <small class="text-muted">Completed Consultations</small>
+    </div>
+  </div>
+  <div class="col-md-3 col-sm-6">
+    <div class="card border-0 shadow-sm p-3 h-100">
+      <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem;">Avg Consultation Time</small>
+      <div class="fw-bold fs-6 text-info mt-1">{{ avg_consult }} mins</div>
+      <small class="text-muted">Per Patient Visit</small>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Today's Appointments Table -->
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <span class="fw-bold"><i class="bi bi-calendar2-day text-primary me-2"></i>Today's Scheduled Consultations</span>
+        <span class="badge bg-light text-muted border">{{ todays_appointments|length }} Patients</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Patient</th>
+              <th>Reason</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for a in todays_appointments %}
+              <tr>
+                <td class="fw-semibold text-primary font-monospace">{{ a.appointment_time.strftime('%H:%M') }}</td>
+                <td>
+                  <a href="{{ url_for('patients.view_patient', id=a.patient_id) }}" class="fw-semibold text-dark text-decoration-none">
+                    {{ a.patient.full_name }}
+                  </a>
+                </td>
+                <td class="small text-muted">{{ a.reason or 'Consultation' }}</td>
+                <td><span class="badge badge-scheduled">{{ a.status }}</span></td>
+                <td>
+                  <form method="POST" action="{{ url_for('appointments.update_status', id=a.id) }}" class="d-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    {% if a.status == 'Scheduled' %}
+                      <input type="hidden" name="status" value="Waiting">
+                      <button type="submit" class="btn btn-xs btn-outline-warning py-0 px-2" style="font-size: 0.75rem;">Mark Arrived</button>
+                    {% elif a.status == 'Waiting' %}
+                      <input type="hidden" name="status" value="In Consultation">
+                      <button type="submit" class="btn btn-xs btn-outline-primary py-0 px-2" style="font-size: 0.75rem;">Start Consult</button>
+                    {% elif a.status == 'In Consultation' %}
+                      <input type="hidden" name="status" value="Completed">
+                      <button type="submit" class="btn btn-xs btn-outline-success py-0 px-2" style="font-size: 0.75rem;">Complete</button>
+                    {% endif %}
+                  </form>
+                </td>
+              </tr>
+            {% else %}
+              <tr><td colspan="5" class="text-center text-muted py-4">No appointments scheduled for today.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Weekly Duty Schedule Card -->
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white">
+        <span class="fw-bold"><i class="bi bi-clock-history text-secondary me-2"></i>Weekly Duty Schedule</span>
+      </div>
+      <div class="card-body p-3">
+        <ul class="list-group list-group-flush">
+          {% for s in schedules %}
+            <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-2">
+              <span class="fw-semibold small text-dark">{{ s.day_of_week }}</span>
+              <span class="badge bg-light text-dark border">
+                {{ s.start_time.strftime('%H:%M') }} - {{ s.end_time.strftime('%H:%M') }}
+              </span>
+            </li>
+          {% else %}
+            <li class="list-group-item text-muted text-center py-3">Standard schedule: Monday to Friday.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Delete Doctor -->
+<div class="modal fade" id="deleteDoctorModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title">Deactivate Doctor Record</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <p>Are you sure you want to deactivate or remove <strong>Dr. {{ doctor.name }}</strong> ({{ doctor.doctor_id }})?</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <form method="POST" action="{{ url_for('doctors.delete_doctor', id=doctor.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-danger">Confirm Deactivation</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

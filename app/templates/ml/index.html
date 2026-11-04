@@ -1,0 +1,283 @@
+{% extends "base.html" %}
+{% block title %}Machine Learning Predictions - Apex Health{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+  <div>
+    <h4 class="fw-bold text-dark mb-1">Machine Learning Operational Intelligence</h4>
+    <p class="text-muted small mb-0">Predictive models for upcoming patient demand forecasting and arrival queue waiting times.</p>
+  </div>
+  <!-- Retrain Models Trigger Form -->
+  <form method="POST" action="{{ url_for('ml.retrain') }}" class="d-flex gap-2">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="model_type" value="all">
+    <button type="submit" class="btn btn-primary shadow-sm" onclick="this.innerHTML='<span class=\'spinner-border spinner-border-sm me-1\'></span> Retraining Models...'; this.disabled=true; this.form.submit();">
+      <i class="bi bi-arrow-repeat me-1"></i>Retrain ML Models
+    </button>
+  </form>
+</div>
+
+<!-- Operational Planning Disclaimer Box -->
+<div class="alert alert-info border-0 shadow-sm d-flex align-items-center mb-4">
+  <i class="bi bi-info-circle-fill fs-4 me-3 text-primary"></i>
+  <div class="small">
+    <strong>Academic Operational Disclaimer:</strong>
+    These machine learning predictions are statistical estimates engineered exclusively for hospital operational resource allocation, bed planning, and staffing optimization. They do not constitute guaranteed waiting durations or clinical medical diagnoses.
+  </div>
+</div>
+
+<!-- ================= SYSTEM A: PATIENT DEMAND FORECAST ================= -->
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+    <div>
+      <h5 class="fw-bold text-dark mb-0">
+        <i class="bi bi-graph-up-arrow me-2 text-primary"></i>System A: Patient Demand Forecasting (Next 7 Days)
+      </h5>
+      <small class="text-muted">Predicts future daily patient intake based on time lags, day-of-week, and seasonality.</small>
+    </div>
+    {% if active_demand_model %}
+      <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2">
+        <i class="bi bi-check-circle me-1"></i>Active: {{ active_demand_model.algorithm_name }}
+      </span>
+    {% endif %}
+  </div>
+  <div class="card-body p-4">
+    <!-- Next Day & 7-Day Forecast Highlight Cards -->
+    <div class="row g-3 mb-4">
+      <div class="col-md-4">
+        <div class="p-3 bg-light rounded text-center border">
+          <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem;">Tomorrow's Expected Patients</small>
+          <div class="fw-bold fs-2 text-primary mt-1">{{ forecast_data.next_day_prediction or 'N/A' }}</div>
+          <small class="text-muted">Expected volume</small>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="p-3 bg-light rounded text-center border">
+          <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem;">7-Day Cumulative Inflow</small>
+          <div class="fw-bold fs-2 text-dark mt-1">{{ forecast_data.seven_day_total or 'N/A' }}</div>
+          <small class="text-muted">Projected arrivals</small>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="p-3 bg-light rounded text-center border">
+          <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem;">Model Validation (RMSE)</small>
+          <div class="fw-bold fs-2 text-success mt-1">
+            {{ active_demand_model.rmse if active_demand_model else 'N/A' }}
+          </div>
+          <small class="text-muted">Trained: {{ active_demand_model.trained_at.strftime('%Y-%m-%d %H:%M') if active_demand_model else 'Untrained' }}</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7-Day Day-by-Day Forecast Table -->
+    <h6 class="fw-bold text-dark mb-2">7-Day Day-by-Day Patient Demand Forecast</h6>
+    <div class="table-responsive mb-4">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Forecast Date</th>
+            <th>Day of Week</th>
+            <th>Predicted Patient Volume</th>
+            <th>Lower Bound (95% CI)</th>
+            <th>Upper Bound (95% CI)</th>
+            <th>Staffing Recommendation</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for fc in forecast_data.forecasts %}
+            <tr>
+              <td class="fw-semibold font-monospace text-primary">{{ fc.date }}</td>
+              <td class="fw-bold text-dark">{{ fc.day_name }}</td>
+              <td>
+                <span class="badge bg-primary px-3 py-1 fs-6">{{ fc.predicted_patients }} Patients</span>
+              </td>
+              <td class="text-muted">{{ fc.lower_bound }}</td>
+              <td class="text-muted">{{ fc.upper_bound }}</td>
+              <td class="small">
+                {% if fc.predicted_patients > 25 %}
+                  <span class="badge badge-danger-alert"><i class="bi bi-person-fill-add me-1"></i>High Demand: Full Roster</span>
+                {% else %}
+                  <span class="badge badge-available"><i class="bi bi-shield-check me-1"></i>Standard Staffing</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="6" class="text-center text-muted py-3">Forecast unavailable. Please train models.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Model Comparison Table -->
+    <h6 class="fw-bold text-dark mb-2">Algorithm Comparison &amp; Selection Benchmarks</h6>
+    <div class="table-responsive">
+      <table class="table table-sm table-bordered align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Algorithm Name</th>
+            <th>MAE (Mean Absolute Error)</th>
+            <th>RMSE (Root Mean Squared Error)</th>
+            <th>R&sup2; Score</th>
+            <th>Selection Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for m in demand_models %}
+            <tr class="{{ 'table-success' if m.is_active else '' }}">
+              <td class="fw-semibold">{{ m.algorithm_name }}</td>
+              <td>{{ m.mae }}</td>
+              <td>{{ m.rmse }}</td>
+              <td>{{ m.r2_score }}</td>
+              <td>
+                {% if m.is_active %}
+                  <span class="badge bg-success"><i class="bi bi-check-lg me-1"></i>Selected (Best RMSE)</span>
+                {% else %}
+                  <span class="badge bg-light text-muted border">Evaluated</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="5" class="text-center text-muted py-2">No demand models trained yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ================= SYSTEM B: PATIENT WAITING TIME PREDICTOR ================= -->
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+    <div>
+      <h5 class="fw-bold text-dark mb-0">
+        <i class="bi bi-stopwatch me-2 text-success"></i>System B: Patient Waiting Time Predictor
+      </h5>
+      <small class="text-muted">Real-time regression inference estimating arrival queue duration based on live department queue size.</small>
+    </div>
+    {% if active_waiting_model %}
+      <span class="badge bg-info-subtle text-info border border-info-subtle px-3 py-2">
+        <i class="bi bi-cpu me-1"></i>Active: {{ active_waiting_model.algorithm_name }}
+      </span>
+    {% endif %}
+  </div>
+
+  <div class="card-body p-4">
+    <div class="row g-4">
+      <!-- Live Prediction Form -->
+      <div class="col-lg-6">
+        <div class="p-3 bg-light rounded border h-100">
+          <h6 class="fw-bold text-dark mb-3"><i class="bi bi-calculator me-1 text-primary"></i>Live Patient Queue Estimator</h6>
+          
+          <form method="POST" action="{{ url_for('ml.predict_waiting_time') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="mb-3">
+              <label class="form-label small fw-semibold">Target Department <span class="text-danger">*</span></label>
+              <select class="form-select" name="department_id" required>
+                <option value="">-- Select Department --</option>
+                {% for d in departments %}
+                  <option value="{{ d.id }}" {{ 'selected' if active_prediction and active_prediction.department_id == d.id else '' }}>
+                    {{ d.name }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="row mb-3">
+              <div class="col-md-6 mb-3 mb-md-0">
+                <label class="form-label small fw-semibold">Current Queue Size (Patients Waiting)</label>
+                <input type="number" class="form-control" name="queue_size" min="0" max="60" value="{{ active_prediction.queue_size if active_prediction else 6 }}" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-semibold">Doctors Currently Available</label>
+                <input type="number" class="form-control" name="available_doctors" min="1" max="20" value="{{ active_prediction.available_doctors if active_prediction else 2 }}" required>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label small fw-semibold">Patient Arrival Time</label>
+              <input type="time" class="form-control" name="arrival_time" value="{{ now.strftime('%H:%M') }}">
+            </div>
+
+            <button type="submit" class="btn btn-success w-100 py-2 fw-semibold shadow-sm">
+              <i class="bi bi-lightning-charge me-1"></i>Run Waiting Time Inference
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Live Prediction Result Display -->
+      <div class="col-lg-6">
+        {% if active_prediction %}
+          <div class="p-4 bg-white rounded border border-success h-100 shadow-sm d-flex flex-column justify-content-between">
+            <div>
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="badge bg-success-subtle text-success fw-bold">Inference Output</span>
+                <small class="text-muted font-monospace">{{ active_prediction.prediction_timestamp }}</small>
+              </div>
+              <h5 class="fw-bold text-dark mb-1">{{ active_prediction.department_name }}</h5>
+              <div class="text-muted small mb-3">
+                Queue: {{ active_prediction.queue_size }} patients &bull; Available Doctors: {{ active_prediction.available_doctors }}
+              </div>
+
+              <div class="p-3 bg-light rounded text-center my-3">
+                <div class="text-muted small text-uppercase fw-semibold">Estimated Waiting Time</div>
+                <div class="fw-bold text-primary display-5 my-1">
+                  {{ active_prediction.predicted_waiting_time_minutes }} <span class="fs-4 text-muted">mins</span>
+                </div>
+                <small class="text-secondary">Expected Interval: {{ active_prediction.lower_bound_minutes }} &ndash; {{ active_prediction.upper_bound_minutes }} minutes</small>
+              </div>
+            </div>
+
+            <div class="alert alert-warning small mb-0 py-2">
+              <i class="bi bi-info-circle me-1"></i>{{ active_prediction.disclaimer }}
+            </div>
+          </div>
+        {% else %}
+          <div class="p-4 bg-light rounded border h-100 d-flex flex-column justify-content-center align-items-center text-center text-muted">
+            <i class="bi bi-cpu fs-1 text-secondary opacity-50 mb-2"></i>
+            <h6 class="fw-semibold text-dark">Ready for Real-Time Inference</h6>
+            <p class="small text-muted mb-0">Select a department and queue parameters on the left to predict expected waiting duration.</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Waiting Time Algorithms Comparison -->
+    <h6 class="fw-bold text-dark mt-4 mb-2">Waiting Time Regression Models Evaluation Matrix</h6>
+    <div class="table-responsive">
+      <table class="table table-sm table-bordered align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Algorithm</th>
+            <th>MAE (Minutes)</th>
+            <th>RMSE (Minutes)</th>
+            <th>R&sup2; Score</th>
+            <th>Selection</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for wm in waiting_models %}
+            <tr class="{{ 'table-success' if wm.is_active else '' }}">
+              <td class="fw-semibold">{{ wm.algorithm_name }}</td>
+              <td>{{ wm.mae }} mins</td>
+              <td>{{ wm.rmse }} mins</td>
+              <td>{{ wm.r2_score }}</td>
+              <td>
+                {% if wm.is_active %}
+                  <span class="badge bg-success"><i class="bi bi-check-lg me-1"></i>Active Deployable Model</span>
+                {% else %}
+                  <span class="badge bg-light text-muted border">Evaluated</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="5" class="text-center text-muted py-2">No waiting time models trained yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

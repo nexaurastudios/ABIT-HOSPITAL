@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Administrator Management - Apex Health{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+  <div>
+    <h4 class="fw-bold text-dark mb-1">Administrator User &amp; Role Management</h4>
+    <p class="text-muted small mb-0">Role-based access control (Super Admin, Hospital Administrator, Data Analyst).</p>
+  </div>
+  <a href="{{ url_for('settings.create_admin') }}" class="btn btn-primary shadow-sm">
+    <i class="bi bi-person-plus me-1"></i>Create New Administrator
+  </a>
+</div>
+
+<!-- Administrators Table -->
+<div class="card border-0 shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Admin User</th>
+          <th>Contact Phone</th>
+          <th>Assigned Roles</th>
+          <th>Account Status</th>
+          <th>Last Login</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in admins %}
+          <tr>
+            <td>
+              <div class="fw-bold text-dark">{{ a.full_name }}</div>
+              <small class="text-muted">{{ a.email }}</small>
+            </td>
+            <td>{{ a.phone or 'Not specified' }}</td>
+            <td>
+              {% for r in a.roles %}
+                <span class="badge {% if r.name == 'Super Admin' %}bg-primary{% elif r.name == 'Hospital Administrator' %}bg-info{% else %}bg-secondary{% endif %}">
+                  {{ r.name }}
+                </span>
+              {% endfor %}
+            </td>
+            <td>
+              <span class="badge {% if a.is_active %}badge-available{% else %}badge-occupied{% endif %}">
+                {{ 'Active' if a.is_active else 'Deactivated' }}
+              </span>
+            </td>
+            <td class="small text-muted">{{ a.last_login.strftime('%Y-%m-%d %H:%M') if a.last_login else 'Never' }}</td>
+            <td class="text-end">
+              <a href="{{ url_for('settings.edit_admin', id=a.id) }}" class="btn btn-sm btn-light border py-1 px-2" title="Edit Admin">
+                <i class="bi bi-pencil"></i>
+              </a>
+              {% if a.id != current_user.id %}
+                <form method="POST" action="{{ url_for('settings.toggle_admin_active', id=a.id) }}" class="d-inline">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="btn btn-sm btn-light border py-1 px-2 {{ 'text-danger' if a.is_active else 'text-success' }}" title="{{ 'Deactivate' if a.is_active else 'Activate' }}">
+                    <i class="bi {{ 'bi-person-x' if a.is_active else 'bi-person-check' }}"></i>
+                  </button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+

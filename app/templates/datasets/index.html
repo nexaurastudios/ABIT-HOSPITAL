@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% block title %}Dataset Management - Apex Health{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+  <div>
+    <h4 class="fw-bold text-dark mb-1">Dataset Management &amp; Data Pipeline</h4>
+    <p class="text-muted small mb-0">Upload CSV hospital data, validate schemas, download sample templates, or generate synthetic benchmarks.</p>
+  </div>
+  <!-- Synthetic Demo Generator Form -->
+  <form method="POST" action="{{ url_for('datasets.generate_synthetic') }}" onsubmit="return confirm('Generate demonstration dataset (~5,000 patients, ~1,000 appointments, ~200 beds)?');">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn btn-outline-primary shadow-sm" onclick="this.innerHTML='<span class=\'spinner-border spinner-border-sm me-1\'></span> Generating Benchmark Data...'; this.disabled=true; this.form.submit();">
+      <i class="bi bi-database-fill-gear me-1"></i>Generate Demonstration Dataset
+    </button>
+  </form>
+</div>
+
+<!-- Current Dataset Row Counts -->
+<div class="row g-3 mb-4">
+  <div class="col-md-3 col-sm-6">
+    <div class="card border-0 shadow-sm p-3">
+      <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem;">Database Patients</small>
+      <div class="fw-bold fs-4 text-dark mt-1">{{ counts.patients }}</div>
+      <small class="text-muted">Registered in MySQL</small>
+    </div>
+  </div>
+  <div class="col-md-3 col-sm-6">
+    <div class="card border-0 shadow-sm p-3">
+      <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem;">Medical Doctors</small>
+      <div class="fw-bold fs-4 text-primary mt-1">{{ counts.doctors }}</div>
+      <small class="text-muted">Active Clinicians</small>
+    </div>
+  </div>
+  <div class="col-md-3 col-sm-6">
+    <div class="card border-0 shadow-sm p-3">
+      <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem;">Clinical Departments</small>
+      <div class="fw-bold fs-4 text-success mt-1">{{ counts.departments }}</div>
+      <small class="text-muted">Specialty Divisions</small>
+    </div>
+  </div>
+  <div class="col-md-3 col-sm-6">
+    <div class="card border-0 shadow-sm p-3">
+      <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem;">Hospital Beds</small>
+      <div class="fw-bold fs-4 text-danger mt-1">{{ counts.beds }}</div>
+      <small class="text-muted">Wards &amp; ICU Beds</small>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <!-- CSV File Upload & Validation Card -->
+  <div class="col-lg-7">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white py-3">
+        <h5 class="fw-bold text-dark mb-0"><i class="bi bi-file-earmark-arrow-up me-2 text-primary"></i>Upload &amp; Validate CSV Dataset</h5>
+      </div>
+      <div class="card-body p-4">
+        <form method="POST" action="{{ url_for('datasets.upload_preview') }}" enctype="multipart/form-data">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Target Entity Category <span class="text-danger">*</span></label>
+            <select class="form-select" name="dataset_type" required>
+              <option value="Patients">Patients Dataset (full_name, age, gender, phone, blood_group)</option>
+              <option value="Doctors">Doctors Dataset (name, qualification, specialization, phone, email)</option>
+              <option value="Departments">Departments Dataset (name, code, head_of_department)</option>
+              <option value="Beds">Beds Dataset (bed_number, ward, bed_type)</option>
+            </select>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label small fw-semibold">Select CSV File <span class="text-danger">*</span></label>
+            <input type="file" class="form-control" name="file" accept=".csv" required>
+            <small class="text-muted">File must be formatted as UTF-8 comma-separated values (.csv).</small>
+          </div>
+
+          <button type="submit" class="btn btn-primary px-4 shadow-sm">
+            <i class="bi bi-search me-1"></i>Preview &amp; Validate CSV
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Download Standard Templates Card -->
+  <div class="col-lg-5">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white py-3">
+        <h5 class="fw-bold text-dark mb-0"><i class="bi bi-download me-2 text-success"></i>Download Sample CSV Templates</h5>
+      </div>
+      <div class="card-body p-4">
+        <p class="text-muted small">Download pre-formatted CSV template files to inspect exact column schemas before uploading:</p>
+        
+        <div class="d-grid gap-2">
+          <a href="{{ url_for('datasets.download_template', entity='patients') }}" class="btn btn-outline-secondary text-start py-2">
+            <i class="bi bi-filetype-csv text-primary me-2"></i>Sample Patients Template (.csv)
+          </a>
+          <a href="{{ url_for('datasets.download_template', entity='doctors') }}" class="btn btn-outline-secondary text-start py-2">
+            <i class="bi bi-filetype-csv text-primary me-2"></i>Sample Doctors Template (.csv)
+          </a>
+          <a href="{{ url_for('datasets.download_template', entity='departments') }}" class="btn btn-outline-secondary text-start py-2">
+            <i class="bi bi-filetype-csv text-primary me-2"></i>Sample Departments Template (.csv)
+          </a>
+          <a href="{{ url_for('datasets.download_template', entity='beds') }}" class="btn btn-outline-secondary text-start py-2">
+            <i class="bi bi-filetype-csv text-primary me-2"></i>Sample Beds Template (.csv)
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Past Dataset Import History Table -->
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-white py-3">
+    <h5 class="fw-bold text-dark mb-0"><i class="bi bi-clock-history me-2 text-secondary"></i>Dataset Import Audit Log</h5>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Import ID</th>
+          <th>File Name</th>
+          <th>Entity Category</th>
+          <th>Row Count</th>
+          <th>Imported Count</th>
+          <th>Status</th>
+          <th>Date &amp; Time</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for imp in imports %}
+          <tr>
+            <td class="font-monospace fw-semibold text-primary">#{{ imp.id }}</td>
+            <td class="fw-semibold text-dark">{{ imp.file_name }}</td>
+            <td><span class="badge bg-light text-dark border">{{ imp.file_type }}</span></td>
+            <td>{{ imp.row_count }}</td>
+            <td class="fw-bold text-success">{{ imp.imported_count }}</td>
+            <td>
+              <span class="badge {% if imp.status == 'Completed' %}badge-available{% else %}badge-occupied{% endif %}">
+                {{ imp.status }}
+              </span>
+            </td>
+            <td class="small text-muted">{{ imp.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="7" class="text-center text-muted py-4">No CSV dataset imports performed yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+

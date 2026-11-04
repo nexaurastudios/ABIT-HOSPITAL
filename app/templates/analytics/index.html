@@ -1,0 +1,455 @@
+{% extends "base.html" %}
+{% block title %}Data Analyst Panel - Apex Health Analytics{% endblock %}
+
+{% block content %}
+<!-- Executive Data Analyst Header -->
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+  <div>
+    <div class="d-flex align-items-center gap-2">
+      <div class="p-2 bg-primary rounded-3 text-white">
+        <i class="bi bi-bar-chart-line-fill fs-5"></i>
+      </div>
+      <div>
+        <h4 class="fw-bold text-dark mb-0">Data Analyst Command Panel</h4>
+        <small class="text-muted">Statistical Analytics Engine &bull; Empirical Patient Flow &bull; Predictive ML Benchmarks</small>
+      </div>
+    </div>
+  </div>
+  <div class="d-flex gap-2">
+    <!-- Quick Report Exporters -->
+    <div class="btn-group shadow-sm">
+      <a href="{{ url_for('reports.index', type='patients', export='csv') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-filetype-csv text-primary me-1"></i>Export CSV
+      </a>
+      <a href="{{ url_for('reports.index', type='patients', export='excel') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-file-earmark-excel text-success me-1"></i>Excel
+      </a>
+      <a href="{{ url_for('reports.index', type='patients', export='pdf') }}" class="btn btn-sm btn-outline-danger">
+        <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+      </a>
+    </div>
+    <a href="{{ url_for('ml.index') }}" class="btn btn-sm btn-primary shadow-sm">
+      <i class="bi bi-cpu me-1"></i>ML Forecasts Hub
+    </a>
+  </div>
+</div>
+
+<!-- High-Level Analytical KPI Metrics Grid -->
+<div class="row g-3 mb-4">
+  <div class="col-xl-3 col-md-6">
+    <div class="card border-0 shadow-sm p-3 h-100">
+      <div class="d-flex justify-content-between align-items-center mb-1">
+        <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem;">Patients Analyzed</small>
+        <div class="p-1 rounded bg-primary-subtle text-primary"><i class="bi bi-people-fill"></i></div>
+      </div>
+      <div class="fw-bold fs-3 text-dark">{{ patient_stats.total or 0 }}</div>
+      <small class="text-muted">{{ patient_stats.new_count or 0 }} New &bull; {{ patient_stats.returning_count or 0 }} Returning ({{ patient_stats.returning_pct or 0 }}%)</small>
+    </div>
+  </div>
+
+  <div class="col-xl-3 col-md-6">
+    <div class="card border-0 shadow-sm p-3 h-100">
+      <div class="d-flex justify-content-between align-items-center mb-1">
+        <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem;">Mean Patient Age</small>
+        <div class="p-1 rounded bg-info-subtle text-info"><i class="bi bi-person-gear"></i></div>
+      </div>
+      <div class="fw-bold fs-3 text-info">{{ patient_stats.avg_age or 0 }} <span class="fs-6 text-muted">years</span></div>
+      <small class="text-muted">Calculated across demographic registry</small>
+    </div>
+  </div>
+
+  <div class="col-xl-3 col-md-6">
+    <div class="card border-0 shadow-sm p-3 h-100">
+      <div class="d-flex justify-content-between align-items-center mb-1">
+        <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem;">Mean Waiting Time</small>
+        <div class="p-1 rounded bg-warning-subtle text-warning"><i class="bi bi-stopwatch-fill"></i></div>
+      </div>
+      <div class="fw-bold fs-3 text-warning">{{ wait_stats.mean if wait_stats else '0.0' }} <span class="fs-6 text-muted">mins</span></div>
+      <small class="text-muted">Median: {{ wait_stats.median if wait_stats else '0.0' }}m &bull; P90: {{ wait_stats.percentile_90 if wait_stats else '0.0' }}m</small>
+    </div>
+  </div>
+
+  <div class="col-xl-3 col-md-6">
+    <div class="card border-0 shadow-sm p-3 h-100">
+      <div class="d-flex justify-content-between align-items-center mb-1">
+        <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem;">Departments Monitored</small>
+        <div class="p-1 rounded bg-success-subtle text-success"><i class="bi bi-hospital"></i></div>
+      </div>
+      <div class="fw-bold fs-3 text-success">{{ dept_analytics|length }} Divisions</div>
+      <small class="text-muted">All active specialized units</small>
+    </div>
+  </div>
+</div>
+
+<!-- Interactive Visual Charts Row -->
+<div class="row g-4 mb-4">
+  <!-- Chart 1: Demographics Age Distribution -->
+  <div class="col-lg-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <span class="fw-bold"><i class="bi bi-bar-chart text-primary me-2"></i>Patient Age Cohort Distribution</span>
+        <span class="badge bg-light text-muted border">Pandas Cut</span>
+      </div>
+      <div class="card-body">
+        <div style="height: 250px;">
+          <canvas id="chartAnalystAge"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart 2: Department Throughput & Workload -->
+  <div class="col-lg-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <span class="fw-bold"><i class="bi bi-activity text-success me-2"></i>Department Patient Throughput</span>
+        <span class="badge bg-light text-muted border">Completed Visits</span>
+      </div>
+      <div class="card-body">
+        <div style="height: 250px;">
+          <canvas id="chartAnalystThroughput"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Analytics Navigation Tabs -->
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-header bg-white border-bottom p-0">
+    <ul class="nav nav-tabs card-header-tabs mx-3 mt-2">
+      <li class="nav-item">
+        <a class="nav-link {{ 'active fw-bold' if active_tab == 'patients' else '' }}" href="{{ url_for('analytics.index', tab='patients') }}">
+          <i class="bi bi-people me-1"></i>1. Patient Demographics &amp; Cohorts
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {{ 'active fw-bold' if active_tab == 'departments' else '' }}" href="{{ url_for('analytics.index', tab='departments') }}">
+          <i class="bi bi-building me-1"></i>2. Department Performance &amp; Capacity
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {{ 'active fw-bold' if active_tab == 'doctors' else '' }}" href="{{ url_for('analytics.index', tab='doctors') }}">
+          <i class="bi bi-person-badge me-1"></i>3. Doctor Workload &amp; Consultation Time
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {{ 'active fw-bold' if active_tab == 'resources' else '' }}" href="{{ url_for('analytics.index', tab='resources') }}">
+          <i class="bi bi-hospital me-1"></i>4. Bed Capacity &amp; Resource Equipment
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {{ 'active fw-bold' if active_tab == 'waiting' else '' }}" href="{{ url_for('analytics.index', tab='waiting') }}">
+          <i class="bi bi-stopwatch me-1"></i>5. Waiting Time Statistical Matrix
+        </a>
+      </li>
+    </ul>
+  </div>
+
+  <div class="card-body p-4">
+    <!-- TAB 1: PATIENT DEMOGRAPHICS -->
+    {% if active_tab == 'patients' %}
+      <div class="row g-4">
+        <!-- Age Groups Breakdown Table -->
+        <div class="col-lg-6">
+          <h6 class="fw-bold text-dark mb-3">Age Group Cohort Statistics</h6>
+          <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>Age Bracket</th>
+                  <th>Patient Count</th>
+                  <th>Proportion</th>
+                  <th>Visual Share</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for age_grp, count in patient_stats.age_distribution.items() %}
+                  <tr>
+                    <td class="fw-semibold text-dark">{{ age_grp }}</td>
+                    <td class="fw-bold">{{ count }}</td>
+                    <td>{{ (count / patient_stats.total * 100)|round(1) }}%</td>
+                    <td style="width: 120px;">
+                      <div class="progress" style="height: 6px;">
+                        <div class="progress-bar bg-primary" style="width: {{ (count / patient_stats.total * 100) }}%;"></div>
+                      </div>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Gender & Blood Distribution -->
+        <div class="col-lg-6">
+          <h6 class="fw-bold text-dark mb-3">Gender Distribution</h6>
+          <div class="row g-2 mb-4">
+            {% for gender, count in patient_stats.gender_distribution.items() %}
+              <div class="col-4">
+                <div class="p-3 bg-light rounded text-center border">
+                  <small class="text-muted d-block">{{ gender }}</small>
+                  <span class="fw-bold fs-4 text-dark">{{ count }}</span>
+                  <small class="text-primary d-block font-monospace">{{ (count / patient_stats.total * 100)|round(1) }}%</small>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+
+          <h6 class="fw-bold text-dark mb-2">Blood Group Demographics</h6>
+          <div class="d-flex flex-wrap gap-2">
+            {% for bg, count in patient_stats.blood_distribution.items() %}
+              <div class="p-2 border rounded text-center" style="min-width: 75px;">
+                <span class="badge bg-danger-subtle text-danger fs-6">{{ bg }}</span>
+                <div class="fw-bold small mt-1">{{ count }}</div>
+                <small class="text-muted" style="font-size: 0.68rem;">{{ (count / patient_stats.total * 100)|round(1) }}%</small>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+    <!-- TAB 2: DEPARTMENT ANALYTICS -->
+    {% elif active_tab == 'departments' %}
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Department</th>
+              <th>Doctors</th>
+              <th>Patients</th>
+              <th>Total Beds</th>
+              <th>Bed Occupancy %</th>
+              <th>Completed Visits</th>
+              <th>Avg Waiting Time</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for d in dept_analytics %}
+              <tr>
+                <td class="fw-bold text-dark">{{ d.name }} <span class="badge bg-light text-secondary border font-monospace">{{ d.code }}</span></td>
+                <td>{{ d.doctors }}</td>
+                <td>{{ d.patients }}</td>
+                <td>{{ d.beds }}</td>
+                <td>
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="small fw-semibold">{{ d.bed_occupancy }}%</span>
+                    <div class="progress flex-grow-1" style="height: 6px; max-width: 100px;">
+                      <div class="progress-bar {{ 'bg-danger' if d.bed_occupancy >= 85 else 'bg-primary' }}" style="width: {{ d.bed_occupancy }}%;"></div>
+                    </div>
+                  </div>
+                </td>
+                <td class="fw-semibold text-success">{{ d.throughput }}</td>
+                <td class="fw-bold text-primary">{{ d.avg_wait_minutes }} mins</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+    <!-- TAB 3: DOCTOR ANALYTICS -->
+    {% elif active_tab == 'doctors' %}
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Doctor</th>
+              <th>Department</th>
+              <th>Specialization</th>
+              <th>Availability</th>
+              <th>Patients Handled</th>
+              <th>Avg Consult Duration</th>
+              <th>Experience</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for doc in doc_analytics %}
+              <tr>
+                <td class="fw-bold text-dark">Dr. {{ doc.name }}</td>
+                <td>{{ doc.department }}</td>
+                <td class="small">{{ doc.specialization }}</td>
+                <td>
+                  <span class="badge {% if doc.status == 'Available' %}badge-available{% elif doc.status == 'Busy' %}badge-busy{% else %}badge-leave{% endif %}">
+                    {{ doc.status }}
+                  </span>
+                </td>
+                <td class="fw-semibold text-primary">{{ doc.patients_handled }}</td>
+                <td class="fw-semibold">{{ doc.avg_duration }} mins</td>
+                <td>{{ doc.experience }} years</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+    <!-- TAB 4: RESOURCE & BED ANALYTICS -->
+    {% elif active_tab == 'resources' %}
+      <h6 class="fw-bold text-dark mb-3">Bed Allocation &amp; Capacity Utilization</h6>
+      <div class="row g-3 mb-4">
+        {% for bt in bed_type_stats %}
+          <div class="col-md-4">
+            <div class="p-3 bg-light rounded border">
+              <div class="d-flex justify-content-between mb-1">
+                <span class="fw-bold text-dark small">{{ bt.type }}</span>
+                <span class="badge {{ 'bg-danger' if bt.rate >= 85 else 'bg-secondary' }}">{{ bt.rate }}% Occ</span>
+              </div>
+              <div class="progress mb-2" style="height: 6px;">
+                <div class="progress-bar {{ 'bg-danger' if bt.rate >= 85 else 'bg-primary' }}" style="width: {{ bt.rate }}%;"></div>
+              </div>
+              <small class="text-muted">Total: {{ bt.total }} &bull; Occupied: {{ bt.occupied }} &bull; Available: {{ bt.available }}</small>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+
+      <h6 class="fw-bold text-dark mb-3">Clinical Medical Equipment Registry</h6>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Equipment Name</th>
+              <th>Type</th>
+              <th>Department</th>
+              <th>Total</th>
+              <th>Available</th>
+              <th>In Use</th>
+              <th>Utilization Rate</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in resource_data %}
+              <tr>
+                <td class="fw-bold text-dark">{{ r.name }}</td>
+                <td><span class="badge bg-light text-dark border">{{ r.type }}</span></td>
+                <td>{{ r.department }}</td>
+                <td>{{ r.total }}</td>
+                <td class="text-success fw-bold">{{ r.available }}</td>
+                <td class="text-danger fw-bold">{{ r.in_use }}</td>
+                <td>
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="small fw-semibold">{{ r.utilization }}%</span>
+                    <div class="progress flex-grow-1" style="height: 6px; max-width: 100px;">
+                      <div class="progress-bar bg-info" style="width: {{ r.utilization }}%;"></div>
+                    </div>
+                  </div>
+                </td>
+                <td><span class="badge badge-available">{{ r.status }}</span></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+    <!-- TAB 5: WAITING TIME ANALYTICS -->
+    {% elif active_tab == 'waiting' %}
+      {% if wait_stats %}
+        <div class="row g-3 mb-4">
+          <div class="col-md-4">
+            <div class="p-3 bg-light rounded text-center border">
+              <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem;">Mean (Average Wait)</small>
+              <div class="fw-bold fs-3 text-primary mt-1">{{ wait_stats.mean }} mins</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="p-3 bg-light rounded text-center border">
+              <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem;">Median (50th Percentile)</small>
+              <div class="fw-bold fs-3 text-dark mt-1">{{ wait_stats.median }} mins</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="p-3 bg-light rounded text-center border">
+              <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem;">90th Percentile (P90 Bottleneck)</small>
+              <div class="fw-bold fs-3 text-danger mt-1">{{ wait_stats.percentile_90 }} mins</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row g-3 text-center">
+          <div class="col-md-4">
+            <div class="p-3 border rounded">
+              <small class="text-muted">Standard Deviation</small>
+              <div class="fw-bold fs-5 mt-1">&plusmn; {{ wait_stats.std_dev }} mins</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="p-3 border rounded">
+              <small class="text-muted">Minimum Queue Duration</small>
+              <div class="fw-bold fs-5 text-success mt-1">{{ wait_stats.min }} mins</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="p-3 border rounded">
+              <small class="text-muted">Maximum Queue Duration</small>
+              <div class="fw-bold fs-5 text-danger mt-1">{{ wait_stats.max }} mins</div>
+            </div>
+          </div>
+        </div>
+      {% else %}
+        <div class="text-center text-muted py-5">
+          <i class="bi bi-clock-history fs-1 text-secondary opacity-50 d-block mb-2"></i>
+          Insufficient completed visit records with timestamps to compute statistics.
+        </div>
+      {% endif %}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // 1. Demographics Age Chart
+    const ctxAge = document.getElementById('chartAnalystAge');
+    if (ctxAge) {
+      new Chart(ctxAge, {
+        type: 'bar',
+        data: {
+          labels: {{ patient_stats.age_distribution.keys()|list|tojson if patient_stats else '[]' }},
+          datasets: [{
+            label: 'Patients',
+            data: {{ patient_stats.age_distribution.values()|list|tojson if patient_stats else '[]' }},
+            backgroundColor: '#0284c7',
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, grid: { color: '#f1f5f9' } },
+            x: { grid: { display: false } }
+          }
+        }
+      });
+    }
+
+    // 2. Department Patient Throughput
+    const ctxThroughput = document.getElementById('chartAnalystThroughput');
+    if (ctxThroughput) {
+      new Chart(ctxThroughput, {
+        type: 'bar',
+        data: {
+          labels: {{ dept_analytics|map(attribute='code')|list|tojson }},
+          datasets: [{
+            label: 'Completed Consultations',
+            data: {{ dept_analytics|map(attribute='throughput')|list|tojson }},
+            backgroundColor: '#0d9488',
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, grid: { color: '#f1f5f9' } },
+            x: { grid: { display: false } }
+          }
+        }
+      });
+    }
+  });
+</script>
+{% endblock %}

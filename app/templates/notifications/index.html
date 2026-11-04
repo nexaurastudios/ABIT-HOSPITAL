@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Notifications Center - Apex Health{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+  <div>
+    <h4 class="fw-bold text-dark mb-1">Hospital Notifications &amp; System Alerts</h4>
+    <p class="text-muted small mb-0">System generated alerts for high bed occupancy, elevated queue waiting times, and operational events.</p>
+  </div>
+  {% if unread_notifications_count > 0 %}
+    <form method="POST" action="{{ url_for('notifications.mark_all_read') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-sm btn-outline-secondary shadow-sm">
+        <i class="bi bi-check2-all me-1"></i>Mark All as Read
+      </button>
+    </form>
+  {% endif %}
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="list-group list-group-flush">
+    {% for n in notifications %}
+      <div class="list-group-item p-3 {{ 'bg-light' if not n.is_read else '' }}">
+        <div class="d-flex justify-content-between align-items-start">
+          <div class="d-flex align-items-start gap-3">
+            <div class="p-2 rounded text-{{ n.category }} bg-{{ n.category }}-subtle mt-1">
+              {% if n.category == 'danger' %}<i class="bi bi-exclamation-octagon-fill fs-5"></i>
+              {% elif n.category == 'warning' %}<i class="bi bi-exclamation-triangle-fill fs-5"></i>
+              {% elif n.category == 'success' %}<i class="bi bi-check-circle-fill fs-5"></i>
+              {% else %}<i class="bi bi-info-circle-fill fs-5"></i>{% endif %}
+            </div>
+            <div>
+              <div class="d-flex align-items-center gap-2">
+                <h6 class="fw-bold text-dark mb-0">{{ n.title }}</h6>
+                {% if not n.is_read %}
+                  <span class="badge bg-danger rounded-pill" style="font-size: 0.65rem;">NEW</span>
+                {% endif %}
+              </div>
+              <p class="text-secondary small mb-1 mt-1">{{ n.message }}</p>
+              <small class="text-muted" style="font-size: 0.75rem;">
+                <i class="bi bi-clock me-1"></i>{{ n.created_at.strftime('%B %d, %Y at %H:%M UTC') }}
+              </small>
+            </div>
+          </div>
+
+          <div class="d-flex gap-2">
+            {% if n.related_url %}
+              <a href="{{ n.related_url }}" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size: 0.78rem;">
+                View Module
+              </a>
+            {% endif %}
+            {% if not n.is_read %}
+              <form method="POST" action="{{ url_for('notifications.mark_read', id=n.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-sm btn-light border py-0 px-2" style="font-size: 0.78rem;" title="Mark as Read">
+                  <i class="bi bi-check2"></i>
+                </button>
+              </form>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    {% else %}
+      <div class="text-center text-muted py-5">
+        <i class="bi bi-bell-slash fs-1 text-secondary opacity-50 d-block mb-2"></i>
+        No notifications in the system log.
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
+

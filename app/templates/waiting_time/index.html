@@ -1,0 +1,312 @@
+{% extends "base.html" %}
+{% block title %}Patient Waiting Time Analysis - Apex Health{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+  <div>
+    <h4 class="fw-bold text-dark mb-1">Patient Waiting Time &amp; Flow Analysis</h4>
+    <p class="text-muted small mb-0">Empirical measurement of patient arrival-to-consultation intervals and clinical bottlenecks.</p>
+  </div>
+  <a href="{{ url_for('ml.index') }}" class="btn btn-outline-primary shadow-sm">
+    <i class="bi bi-magic me-1"></i>Predict Waiting Times (AI)
+  </a>
+</div>
+
+<!-- Metrics Summary Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-xl-3 col-md-6">
+    <div class="card border-0 shadow-sm p-3 h-100">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem;">Average Waiting Time</small>
+        <span class="badge {{ 'bg-danger' if metrics.avg_wait >= metrics.threshold else 'bg-success' }}">
+          Target &lt; {{ metrics.threshold }}m
+        </span>
+      </div>
+      <div class="fw-bold fs-3 text-dark">{{ metrics.avg_wait }} <span class="fs-6 text-muted">minutes</span></div>
+      <small class="text-muted">Mean arrival to doctor consultation</small>
+    </div>
+  </div>
+
+  <div class="col-xl-3 col-md-6">
+    <div class="card border-0 shadow-sm p-3 h-100">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem;">Waiting Time Range</small>
+        <span class="badge bg-light text-secondary border">Extremes</span>
+      </div>
+      <div class="fw-bold fs-3 text-primary">{{ metrics.shortest_wait }}m &ndash; {{ metrics.longest_wait }}m</div>
+      <small class="text-muted">Shortest vs Longest wait duration</small>
+    </div>
+  </div>
+
+  <div class="col-xl-3 col-md-6">
+    <div class="card border-0 shadow-sm p-3 h-100">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem;">Avg Consultation Duration</small>
+        <div class="kpi-icon bg-info-subtle text-info"><i class="bi bi-clock"></i></div>
+      </div>
+      <div class="fw-bold fs-3 text-info">{{ metrics.avg_duration }} <span class="fs-6 text-muted">minutes</span></div>
+      <small class="text-muted">Time spent with doctor in clinic</small>
+    </div>
+  </div>
+
+  <div class="col-xl-3 col-md-6">
+    <div class="card border-0 shadow-sm p-3 h-100">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem;">Active Waiting Queue</small>
+        <span class="badge bg-warning text-dark">{{ metrics.active_waiting }} Waiting</span>
+      </div>
+      <div class="fw-bold fs-3 text-warning">{{ metrics.active_waiting + metrics.active_in_consult }}</div>
+      <small class="text-muted">{{ metrics.active_in_consult }} currently in consultation</small>
+    </div>
+  </div>
+</div>
+
+<!-- Department Waiting Time Benchmark Alert Table -->
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-header bg-white d-flex justify-content-between align-items-center">
+    <span class="fw-bold"><i class="bi bi-hospital text-primary me-2"></i>Department Waiting Time Performance Matrix</span>
+    <span class="small text-muted">Alert Trigger: &gt; {{ metrics.threshold }} minutes</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Department</th>
+          <th>Completed Visits</th>
+          <th>Average Waiting Time</th>
+          <th>Performance Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in departments_summary %}
+          <tr>
+            <td class="fw-semibold text-dark">{{ d.name }}</td>
+            <td>{{ d.visits_count }}</td>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <span class="fw-bold {{ 'text-danger' if d.is_high else 'text-dark' }}">{{ d.avg_wait }} mins</span>
+                <div class="progress flex-grow-1" style="height: 6px; max-width: 140px;">
+                  <div class="progress-bar {{ 'bg-danger' if d.is_high else 'bg-primary' }}" style="width: {{ (d.avg_wait / 60) * 100 }}%;"></div>
+                </div>
+              </div>
+            </td>
+            <td>
+              {% if d.is_high %}
+                <span class="badge badge-danger-alert"><i class="bi bi-exclamation-triangle me-1"></i>Bottleneck Detected</span>
+              {% else %}
+                <span class="badge badge-available"><i class="bi bi-check-circle me-1"></i>Optimal Flow</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Waiting Time Visual Trends -->
+<div class="row g-4 mb-4">
+  <div class="col-lg-7">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white">
+        <span class="fw-bold"><i class="bi bi-clock text-primary me-2"></i>Average Waiting Time by Arrival Hour of Day</span>
+      </div>
+      <div class="card-body">
+        <div style="height: 260px;">
+          <canvas id="chartHourlyWait"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white">
+        <span class="fw-bold"><i class="bi bi-person-lines-fill text-success me-2"></i>Doctor Consultation Durations</span>
+      </div>
+      <div class="card-body">
+        <div style="height: 260px;">
+          <canvas id="chartDocDuration"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Visits Records Log & Tabs -->
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-white border-bottom p-0">
+    <ul class="nav nav-tabs card-header-tabs mx-3 mt-2">
+      <li class="nav-item">
+        <a class="nav-link {{ 'active fw-bold' if status_tab == 'completed' else '' }}" href="{{ url_for('waiting_time.index', tab='completed') }}">
+          <i class="bi bi-check2-circle me-1"></i>Completed Patient Records
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {{ 'active fw-bold' if status_tab == 'active' else '' }}" href="{{ url_for('waiting_time.index', tab='active') }}">
+          <i class="bi bi-hourglass-split me-1"></i>Active Patient Queue ({{ metrics.active_waiting + metrics.active_in_consult }})
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {{ 'active fw-bold' if status_tab == 'incomplete' else '' }}" href="{{ url_for('waiting_time.index', tab='incomplete') }}">
+          <i class="bi bi-dash-circle me-1"></i>Incomplete Timestamps ({{ metrics.incomplete_count }})
+        </a>
+      </li>
+    </ul>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Visit ID</th>
+          <th>Patient</th>
+          <th>Doctor &amp; Dept</th>
+          <th>Arrival</th>
+          <th>Consult Start</th>
+          <th>Consult End</th>
+          <th>Waiting Time</th>
+          <th>Duration</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for v in visits %}
+          <tr>
+            <td class="font-monospace fw-semibold text-primary">{{ v.visit_id }}</td>
+            <td>
+              <a href="{{ url_for('patients.view_patient', id=v.patient_id) }}" class="fw-bold text-dark text-decoration-none">
+                {{ v.patient.full_name }}
+              </a>
+            </td>
+            <td>
+              <div class="fw-semibold text-dark">Dr. {{ v.doctor.name }}</div>
+              <small class="text-muted">{{ v.department.name }}</small>
+            </td>
+            <td class="small">{{ v.arrival_time.strftime('%H:%M') if v.arrival_time else '<span class="text-muted">Not recorded</span>'|safe }}</td>
+            <td class="small">{{ v.consultation_start_time.strftime('%H:%M') if v.consultation_start_time else '<span class="text-muted">-</span>'|safe }}</td>
+            <td class="small">{{ v.consultation_end_time.strftime('%H:%M') if v.consultation_end_time else '<span class="text-muted">-</span>'|safe }}</td>
+            <td>
+              {% if v.waiting_time_minutes is not none %}
+                <span class="fw-bold {{ 'text-danger' if v.waiting_time_minutes >= metrics.threshold else 'text-primary' }}">
+                  {{ v.waiting_time_minutes }} mins
+                </span>
+              {% else %}
+                <span class="badge bg-light text-muted border">Incomplete</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if v.consultation_duration_minutes is not none %}
+                {{ v.consultation_duration_minutes }} mins
+              {% else %}
+                <span class="text-muted">-</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if v.status != 'Completed' %}
+                <form method="POST" action="{{ url_for('waiting_time.update_timestamp', id=v.id) }}" class="d-inline">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  {% if not v.consultation_start_time %}
+                    <input type="hidden" name="action" value="start_consultation">
+                    <button type="submit" class="btn btn-xs btn-outline-primary py-0 px-2" style="font-size: 0.72rem;">Start</button>
+                  {% elif not v.consultation_end_time %}
+                    <input type="hidden" name="action" value="end_consultation">
+                    <button type="submit" class="btn btn-xs btn-outline-success py-0 px-2" style="font-size: 0.72rem;">Finish</button>
+                  {% endif %}
+                </form>
+              {% else %}
+                <span class="badge badge-available">Logged</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="9" class="text-center text-muted py-5">No visit records found in this view.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  {% if pagination.pages > 1 %}
+    <div class="card-footer bg-white d-flex justify-content-between align-items-center py-3">
+      <small class="text-muted">Showing page {{ pagination.page }} of {{ pagination.pages }} ({{ pagination.total }} total records)</small>
+      <nav>
+        <ul class="pagination pagination-sm mb-0">
+          {% if pagination.has_prev %}
+            <li class="page-item"><a class="page-link" href="{{ url_for('waiting_time.index', page=pagination.prev_num, tab=status_tab) }}">Previous</a></li>
+          {% endif %}
+          <li class="page-item active"><span class="page-link">{{ pagination.page }}</span></li>
+          {% if pagination.has_next %}
+            <li class="page-item"><a class="page-link" href="{{ url_for('waiting_time.index', page=pagination.next_num, tab=status_tab) }}">Next</a></li>
+          {% endif %}
+        </ul>
+      </nav>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    fetch('/waiting-time/api/charts')
+      .then(res => res.json())
+      .then(data => {
+        // Hourly Waiting Time Chart
+        const ctxH = document.getElementById('chartHourlyWait');
+        if (ctxH) {
+          new Chart(ctxH, {
+            type: 'line',
+            data: {
+              labels: data.hourly.labels,
+              datasets: [{
+                label: 'Avg Waiting Time (Minutes)',
+                data: data.hourly.averages,
+                borderColor: '#6366f1',
+                backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                fill: true,
+                tension: 0.3
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: {
+                y: { beginAtZero: true, grid: { color: '#f1f5f9' } },
+                x: { grid: { display: false } }
+              }
+            }
+          });
+        }
+
+        // Doctor Durations Chart
+        const ctxD = document.getElementById('chartDocDuration');
+        if (ctxD) {
+          new Chart(ctxD, {
+            type: 'bar',
+            data: {
+              labels: data.doctor_durations.labels,
+              datasets: [{
+                label: 'Avg Consult (Minutes)',
+                data: data.doctor_durations.durations,
+                backgroundColor: '#0d9488',
+                borderRadius: 4
+              }]
+            },
+            options: {
+              indexAxis: 'y',
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { display: false } },
+              scales: {
+                x: { beginAtZero: true, grid: { color: '#f1f5f9' } },
+                y: { grid: { display: false } }
+              }
+            }
+          });
+        }
+      });
+  });
+</script>
+{% endblock %}
+

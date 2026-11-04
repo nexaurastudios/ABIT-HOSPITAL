@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}New Inpatient Admission - Apex Health{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm rounded-3">
+      <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+        <h5 class="fw-bold mb-0 text-dark">
+          <i class="bi bi-door-open me-2 text-primary"></i>Admit Patient to Inpatient Bed
+        </h5>
+        <span class="badge bg-light text-secondary border font-monospace">{{ suggested_id }}</span>
+      </div>
+      <div class="card-body p-4">
+        <form method="POST" action="{{ url_for('admissions.create_admission') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+          <!-- Patient Selection -->
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Select Registered Patient <span class="text-danger">*</span></label>
+            <select class="form-select" name="patient_id" required>
+              <option value="">-- Choose Patient to Admit --</option>
+              {% for p in patients %}
+                <option value="{{ p.id }}" {{ 'selected' if pre_patient_id == p.id else '' }}>
+                  {{ p.full_name }} ({{ p.patient_id }}) - Age: {{ p.age }}, Blood: {{ p.blood_group }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Department & Attending Doctor -->
+          <div class="row mb-3">
+            <div class="col-md-6 mb-3 mb-md-0">
+              <label class="form-label small fw-semibold">Department <span class="text-danger">*</span></label>
+              <select class="form-select" name="department_id" id="admissionDeptSelect" required>
+                <option value="">-- Select Department --</option>
+                {% for d in departments %}
+                  <option value="{{ d.id }}">{{ d.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">Attending Doctor <span class="text-danger">*</span></label>
+              <select class="form-select" name="doctor_id" id="admissionDoctorSelect" required>
+                <option value="">-- Select Doctor --</option>
+                {% for doc in doctors %}
+                  <option value="{{ doc.id }}" data-dept="{{ doc.department_id }}">Dr. {{ doc.name }} ({{ doc.specialization }})</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <!-- Available Bed Selection -->
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Allocate Available Hospital Bed <span class="text-danger">*</span></label>
+            <select class="form-select" name="bed_id" id="admissionBedSelect" required>
+              <option value="">-- Select Available Bed --</option>
+              {% for b in available_beds %}
+                <option value="{{ b.id }}" data-dept="{{ b.department_id }}">
+                  {{ b.bed_id }} &bull; {{ b.ward }} ({{ b.bed_type }}) - {{ b.department.name }}
+                </option>
+              {% endfor %}
+            </select>
+            <small class="text-muted">Only unoccupied beds with status 'Available' are eligible for assignment.</small>
+          </div>
+
+          <!-- Reason & Clinical Diagnosis -->
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Admission Reason <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" name="admission_reason" placeholder="e.g., Post-operative inpatient observation, acute distress, continuous monitoring" required>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label small fw-semibold">Provisional Diagnosis</label>
+            <textarea class="form-control" name="diagnosis" rows="3" placeholder="Initial clinical findings, vitals upon admission..."></textarea>
+          </div>
+
+          <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+            <a href="{{ url_for('admissions.list_admissions') }}" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary px-4">
+              <i class="bi bi-check2 me-1"></i>Process Inpatient Admission
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Filter doctor and bed dropdowns according to selected department
+  document.getElementById('admissionDeptSelect').addEventListener('change', function() {
+    const selectedDeptId = this.value;
+    
+    // Filter Doctors
+    const docSelect = document.getElementById('admissionDoctorSelect');
+    docSelect.querySelectorAll('option').forEach(opt => {
+      if (!opt.value) return;
+      opt.style.display = (!selectedDeptId || opt.dataset.dept === selectedDeptId) ? '' : 'none';
+    });
+    docSelect.value = '';
+
+    // Filter Beds
+    const bedSelect = document.getElementById('admissionBedSelect');
+    bedSelect.querySelectorAll('option').forEach(opt => {
+      if (!opt.value) return;
+      opt.style.display = (!selectedDeptId || opt.dataset.dept === selectedDeptId) ? '' : 'none';
+    });
+    bedSelect.value = '';
+  });
+</script>
+{% endblock %}
+

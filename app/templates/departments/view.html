@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% block title %}{{ dept.name }} Department Hub - Apex Health{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+  <div>
+    <div class="d-flex align-items-center gap-2">
+      <span class="badge bg-primary font-monospace fs-6">{{ dept.code }}</span>
+      <h4 class="fw-bold text-dark mb-0">{{ dept.name }} Department</h4>
+    </div>
+    <p class="text-muted small mb-0">{{ dept.floor }} &bull; Head of Department: {{ dept.head_of_department or 'Dr. Chief Clinician' }} &bull; Phone: {{ dept.phone or 'General Switchboard' }}</p>
+  </div>
+
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('appointments.create_appointment') }}" class="btn btn-sm btn-outline-primary shadow-sm">
+      <i class="bi bi-calendar-plus me-1"></i>Book Appointment
+    </a>
+    <a href="{{ url_for('departments.edit_department', id=dept.id) }}" class="btn btn-sm btn-outline-secondary shadow-sm">
+      <i class="bi bi-pencil me-1"></i>Edit Details
+    </a>
+    <button type="button" class="btn btn-sm btn-outline-danger shadow-sm" data-bs-toggle="modal" data-bs-target="#deleteDeptModal">
+      <i class="bi bi-trash me-1"></i>Delete
+    </button>
+  </div>
+</div>
+
+<!-- Department KPI Overview -->
+<div class="row g-3 mb-4">
+  <div class="col-md-3 col-sm-6">
+    <div class="card border-0 shadow-sm p-3 h-100">
+      <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem;">Assigned Doctors</small>
+      <div class="fw-bold fs-4 text-dark mt-1">{{ doctors|length }}</div>
+      <small class="text-success"><i class="bi bi-shield-check me-1"></i>Clinical Specialists</small>
+    </div>
+  </div>
+  <div class="col-md-3 col-sm-6">
+    <div class="card border-0 shadow-sm p-3 h-100">
+      <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem;">Department Beds</small>
+      <div class="fw-bold fs-4 text-dark mt-1">{{ total_beds }}</div>
+      <small class="text-danger"><i class="bi bi-hospital me-1"></i>{{ occupied_beds }} Occupied ({{ bed_pct }}%)</small>
+    </div>
+  </div>
+  <div class="col-md-3 col-sm-6">
+    <div class="card border-0 shadow-sm p-3 h-100">
+      <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem;">Today's Appointments</small>
+      <div class="fw-bold fs-4 text-primary mt-1">{{ today_appts|length }}</div>
+      <small class="text-muted">Outpatient Queue</small>
+    </div>
+  </div>
+  <div class="col-md-3 col-sm-6">
+    <div class="card border-0 shadow-sm p-3 h-100">
+      <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem;">Average Waiting Time</small>
+      <div class="fw-bold fs-4 text-info mt-1">{{ avg_wait }} mins</div>
+      <small class="text-muted">Arrival to Consultation</small>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Assigned Doctors -->
+  <div class="col-lg-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <span class="fw-bold"><i class="bi bi-people text-primary me-2"></i>Assigned Doctors ({{ doctors|length }})</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Doctor</th>
+              <th>Specialization</th>
+              <th>Status</th>
+              <th>Duty Hours</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for doc in doctors %}
+              <tr>
+                <td>
+                  <a href="{{ url_for('doctors.view_doctor', id=doc.id) }}" class="fw-semibold text-dark text-decoration-none">
+                    Dr. {{ doc.name }}
+                  </a>
+                  <div class="small text-muted font-monospace">{{ doc.doctor_id }}</div>
+                </td>
+                <td class="small">{{ doc.specialization }}</td>
+                <td>
+                  <span class="badge {% if doc.availability_status == 'Available' %}badge-available{% elif doc.availability_status == 'Busy' %}badge-busy{% else %}badge-leave{% endif %}">
+                    {{ doc.availability_status }}
+                  </span>
+                </td>
+                <td class="small text-muted">{{ doc.duty_start_time.strftime('%H:%M') }} - {{ doc.duty_end_time.strftime('%H:%M') }}</td>
+              </tr>
+            {% else %}
+              <tr><td colspan="4" class="text-center text-muted py-4">No doctors assigned to this department yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Today's Consultations -->
+  <div class="col-lg-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <span class="fw-bold"><i class="bi bi-calendar2-check text-success me-2"></i>Today's Department Appointments ({{ today_appts|length }})</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Patient</th>
+              <th>Doctor</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for a in today_appts %}
+              <tr>
+                <td class="fw-semibold font-monospace">{{ a.appointment_time.strftime('%H:%M') }}</td>
+                <td>
+                  <a href="{{ url_for('patients.view_patient', id=a.patient_id) }}" class="text-dark fw-bold text-decoration-none">
+                    {{ a.patient.full_name }}
+                  </a>
+                </td>
+                <td class="small">Dr. {{ a.doctor.name }}</td>
+                <td><span class="badge badge-scheduled">{{ a.status }}</span></td>
+              </tr>
+            {% else %}
+              <tr><td colspan="4" class="text-center text-muted py-4">No appointments scheduled today for {{ dept.name }}.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Delete Department -->
+<div class="modal fade" id="deleteDeptModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title">Delete Department</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <p>Are you sure you want to delete the <strong>{{ dept.name }}</strong> department?</p>
+        <div class="alert alert-warning small mb-0">
+          Note: Departments cannot be deleted if active doctors, beds, or patients are linked to them.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <form method="POST" action="{{ url_for('departments.delete_department', id=dept.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-danger">Confirm Delete</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

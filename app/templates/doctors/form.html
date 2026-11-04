@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit Doctor' if doctor else 'Add New Doctor' }} - Apex Health{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm rounded-3">
+      <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+        <h5 class="fw-bold mb-0 text-dark">
+          <i class="bi bi-person-badge me-2 text-primary"></i>{{ 'Edit Doctor Information' if doctor else 'Add New Doctor' }}
+        </h5>
+        <span class="badge bg-light text-secondary border font-monospace">{{ doctor.doctor_id if doctor else suggested_id }}</span>
+      </div>
+      <div class="card-body p-4">
+        <form method="POST" action="{{ url_for('doctors.edit_doctor', id=doctor.id) if doctor else url_for('doctors.create_doctor') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+          <div class="row mb-3">
+            <div class="col-md-6 mb-3 mb-md-0">
+              <label class="form-label small fw-semibold">Doctor Full Name <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text bg-light text-muted">Dr.</span>
+                <input type="text" class="form-control" name="name" value="{{ doctor.name if doctor else '' }}" placeholder="Arthur Vance" required>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">Medical Department <span class="text-danger">*</span></label>
+              <select class="form-select" name="department_id" required>
+                <option value="">Select Department</option>
+                {% for d in departments %}
+                  <option value="{{ d.id }}" {{ 'selected' if doctor and doctor.department_id == d.id else '' }}>{{ d.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-md-6 mb-3 mb-md-0">
+              <label class="form-label small fw-semibold">Qualification <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="qualification" value="{{ doctor.qualification if doctor else '' }}" placeholder="e.g., MBBS, MD (Cardiology)" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">Specialization Area <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="specialization" value="{{ doctor.specialization if doctor else '' }}" placeholder="e.g., Interventional Cardiology" required>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-md-6 mb-3 mb-md-0">
+              <label class="form-label small fw-semibold">Official Hospital Email <span class="text-danger">*</span></label>
+              <input type="email" class="form-control" name="email" value="{{ doctor.email if doctor else '' }}" placeholder="doc.name@apexhealth.org" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">Contact Phone Number <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="phone" value="{{ doctor.phone if doctor else '' }}" placeholder="+1 555-0123" required>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-md-4 mb-3 mb-md-0">
+              <label class="form-label small fw-semibold">Experience (Years)</label>
+              <input type="number" class="form-control" name="experience_years" min="1" max="60" value="{{ doctor.experience_years if doctor else 5 }}">
+            </div>
+            <div class="col-md-4 mb-3 mb-md-0">
+              <label class="form-label small fw-semibold">Duty Start Time</label>
+              <input type="time" class="form-control" name="duty_start_time" value="{{ doctor.duty_start_time.strftime('%H:%M') if doctor else '08:00' }}">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small fw-semibold">Duty End Time</label>
+              <input type="time" class="form-control" name="duty_end_time" value="{{ doctor.duty_end_time.strftime('%H:%M') if doctor else '16:00' }}">
+            </div>
+          </div>
+
+          <div class="row mb-4">
+            <div class="col-md-6 mb-3 mb-md-0">
+              <label class="form-label small fw-semibold">Max Daily Patient Capacity</label>
+              <input type="number" class="form-control" name="max_patient_capacity" min="5" max="100" value="{{ doctor.max_patient_capacity if doctor else 25 }}">
+            </div>
+            {% if doctor %}
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">Availability Status</label>
+              <select class="form-select" name="availability_status">
+                <option value="Available" {{ 'selected' if doctor.availability_status == 'Available' else '' }}>Available</option>
+                <option value="Busy" {{ 'selected' if doctor.availability_status == 'Busy' else '' }}>Busy</option>
+                <option value="On Leave" {{ 'selected' if doctor.availability_status == 'On Leave' else '' }}>On Leave</option>
+                <option value="Not Available" {{ 'selected' if doctor.availability_status == 'Not Available' else '' }}>Not Available</option>
+              </select>
+            </div>
+            {% endif %}
+          </div>
+
+          <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+            <a href="{{ url_for('doctors.list_doctors') }}" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary px-4">
+              <i class="bi bi-save me-1"></i>{{ 'Save Changes' if doctor else 'Register Doctor' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

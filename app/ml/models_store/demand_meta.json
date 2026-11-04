@@ -1,0 +1,33 @@
+{
+  "best_algorithm": "Gradient Boosting Regressor",
+  "features": [
+    "day_of_week",
+    "month",
+    "day_of_month",
+    "is_weekend",
+    "lag_1",
+    "lag_2",
+    "lag_7",
+    "rolling_7_mean"
+  ],
+  "training_date": "2026-11-04 07:02:43",
+  "metrics": {
+    "Random Forest Regressor": {
+      "mae": 15.64,
+      "rmse": 18.51,
+      "r2_score": 0.0
+    },
+    "Gradient Boosting Regressor": {
+      "mae": 14.03,
+      "rmse": 16.72,
+      "r2_score": 0.0
+    },
+    "Linear Regression": {
+      "mae": 31.34,
+      "rmse": 35.66,
+      "r2_score": 0.0
+    }
+  },
+  "last_known_count": 1.0,
+  "last_known_date": "2026-11-20"
+}

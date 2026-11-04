@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Schedule Appointment - Apex Health{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm rounded-3">
+      <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+        <h5 class="fw-bold mb-0 text-dark">
+          <i class="bi bi-calendar-plus me-2 text-primary"></i>Schedule New Consultation Appointment
+        </h5>
+        <span class="badge bg-light text-secondary border font-monospace">{{ suggested_id }}</span>
+      </div>
+      <div class="card-body p-4">
+        <form method="POST" action="{{ url_for('appointments.create_appointment') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+          <!-- Patient Selection -->
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Select Registered Patient <span class="text-danger">*</span></label>
+            <select class="form-select" name="patient_id" required>
+              <option value="">-- Choose Existing Patient --</option>
+              {% for p in patients %}
+                <option value="{{ p.id }}" {{ 'selected' if pre_patient_id == p.id else '' }}>
+                  {{ p.full_name }} ({{ p.patient_id }}) - Phone: {{ p.phone }}
+                </option>
+              {% endfor %}
+            </select>
+            <small class="text-muted">Not registered yet? <a href="{{ url_for('patients.create_patient') }}">Register new patient first</a></small>
+          </div>
+
+          <!-- Department & Doctor Selection -->
+          <div class="row mb-3">
+            <div class="col-md-6 mb-3 mb-md-0">
+              <label class="form-label small fw-semibold">Medical Department <span class="text-danger">*</span></label>
+              <select class="form-select" name="department_id" id="appointmentDeptSelect" required>
+                <option value="">-- Choose Department --</option>
+                {% for d in departments %}
+                  <option value="{{ d.id }}">{{ d.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">Attending Doctor <span class="text-danger">*</span></label>
+              <select class="form-select" name="doctor_id" id="appointmentDoctorSelect" required>
+                <option value="">-- Choose Doctor --</option>
+                {% for doc in doctors %}
+                  <option value="{{ doc.id }}" data-dept="{{ doc.department_id }}">
+                    Dr. {{ doc.name }} ({{ doc.specialization }}) [{{ doc.duty_start_time.strftime('%H:%M') }}-{{ doc.duty_end_time.strftime('%H:%M') }}]
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <!-- Date & Time Selection -->
+          <div class="row mb-3">
+            <div class="col-md-6 mb-3 mb-md-0">
+              <label class="form-label small fw-semibold">Appointment Date <span class="text-danger">*</span></label>
+              <input type="date" class="form-control" name="appointment_date" required min="{{ now.strftime('%Y-%m-%d') }}" value="{{ now.strftime('%Y-%m-%d') }}">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">Appointment Time Slot <span class="text-danger">*</span></label>
+              <input type="time" class="form-control" name="appointment_time" required value="09:00">
+              <small class="text-muted">Must fall within doctor's shift duty hours</small>
+            </div>
+          </div>
+
+          <!-- Reason & Notes -->
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Primary Reason for Visit</label>
+            <input type="text" class="form-control" name="reason" placeholder="e.g., Follow-up consultation, acute chest pain, routine physical..." required>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label small fw-semibold">Clinical Notes / Pre-visit Instructions</label>
+            <textarea class="form-control" name="notes" rows="2" placeholder="Optional notes for physician..."></textarea>
+          </div>
+
+          <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+            <a href="{{ url_for('appointments.list_appointments') }}" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary px-4">
+              <i class="bi bi-calendar-check me-1"></i>Confirm Appointment
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Filter doctor dropdown according to selected department
+  document.getElementById('appointmentDeptSelect').addEventListener('change', function() {
+    const selectedDeptId = this.value;
+    const doctorSelect = document.getElementById('appointmentDoctorSelect');
+    const options = doctorSelect.querySelectorAll('option');
+
+    options.forEach(opt => {
+      if (!opt.value) return; // Keep the placeholder
+      if (!selectedDeptId || opt.dataset.dept === selectedDeptId) {
+        opt.style.display = '';
+      } else {
+        opt.style.display = 'none';
+      }
+    });
+
+    doctorSelect.value = '';
+  });
+</script>
+{% endblock %}
+

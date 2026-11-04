@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Add Hospital Bed - Apex Health{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <div class="card border-0 shadow-sm rounded-3">
+      <div class="card-header bg-white border-bottom py-3">
+        <h5 class="fw-bold mb-0 text-dark">
+          <i class="bi bi-hospital me-2 text-primary"></i>Add New Hospital Bed
+        </h5>
+      </div>
+      <div class="card-body p-4">
+        <form method="POST" action="{{ url_for('beds.create_bed') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+          <div class="row mb-3">
+            <div class="col-md-6 mb-3 mb-md-0">
+              <label class="form-label small fw-semibold">Bed Number <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="bed_number" placeholder="e.g., 205" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">Bed Type <span class="text-danger">*</span></label>
+              <select class="form-select" name="bed_type" required>
+                <option value="General Ward">General Ward</option>
+                <option value="ICU">ICU (Intensive Care Unit)</option>
+                <option value="Private Room">Private Room</option>
+                <option value="Emergency">Emergency Bay</option>
+                <option value="Semi-Private">Semi-Private Room</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row mb-4">
+            <div class="col-md-6 mb-3 mb-md-0">
+              <label class="form-label small fw-semibold">Hospital Department <span class="text-danger">*</span></label>
+              <select class="form-select" name="department_id" required>
+                <option value="">Select Department</option>
+                {% for d in departments %}
+                  <option value="{{ d.id }}">{{ d.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">Ward / Wing Location <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="ward" placeholder="e.g., Cardiology Ward B" required>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+            <a href="{{ url_for('beds.list_beds') }}" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary px-4">
+              <i class="bi bi-plus-lg me-1"></i>Create Bed
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

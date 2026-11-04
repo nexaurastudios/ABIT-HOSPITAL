@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 60" width="240" height="60">
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0284c7;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0d9488;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- Medical Cross with Analytics Pulse -->
+  <rect x="12" y="10" width="38" height="38" rx="8" fill="url(#grad1)" />
+  <path d="M 31 16 L 31 42 M 18 29 L 44 29" stroke="#ffffff" stroke-width="4.5" stroke-linecap="round" />
+  <polyline points="20,31 25,31 28,21 34,37 37,29 42,29" fill="none" stroke="#f0fdf4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+  
+  <!-- Text Brand -->
+  <text x="60" y="28" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="19" font-weight="800" fill="#0f172a">APEX<tspan fill="#0284c7">HEALTH</tspan></text>
+  <text x="60" y="44" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="9" font-weight="600" letter-spacing="1.5" fill="#64748b">OPTIMIZATION &amp; ANALYTICS</text>
+</svg>
+

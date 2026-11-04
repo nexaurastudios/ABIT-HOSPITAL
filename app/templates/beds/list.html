@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% block title %}Hospital Bed Management - Apex Health{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+  <div>
+    <h4 class="fw-bold text-dark mb-1">Hospital Bed &amp; Capacity Management</h4>
+    <p class="text-muted small mb-0">Track inpatient ward capacity, occupancy percentages, and bed assignments in real-time.</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('admissions.list_admissions') }}" class="btn btn-outline-secondary shadow-sm">
+      <i class="bi bi-door-open me-1"></i>Admissions &amp; Discharges
+    </a>
+    <a href="{{ url_for('beds.create_bed') }}" class="btn btn-primary shadow-sm">
+      <i class="bi bi-plus-circle me-1"></i>Add New Bed
+    </a>
+  </div>
+</div>
+
+<!-- Bed Occupancy KPI Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-xl-2 col-md-4 col-sm-6">
+    <div class="card border-0 shadow-sm p-3 h-100">
+      <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem;">Total Beds</small>
+      <div class="fw-bold fs-4 text-dark mt-1">{{ metrics.total }}</div>
+      <small class="text-muted">Total Capacity</small>
+    </div>
+  </div>
+  <div class="col-xl-2 col-md-4 col-sm-6">
+    <div class="card border-0 shadow-sm p-3 h-100">
+      <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem;">Occupied</small>
+      <div class="fw-bold fs-4 text-danger mt-1"><i class="bi bi-person-fill me-1"></i>{{ metrics.occupied }}</div>
+      <small class="text-muted">Inpatient Beds</small>
+    </div>
+  </div>
+  <div class="col-xl-2 col-md-4 col-sm-6">
+    <div class="card border-0 shadow-sm p-3 h-100">
+      <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem;">Available</small>
+      <div class="fw-bold fs-4 text-success mt-1"><i class="bi bi-check2-circle me-1"></i>{{ metrics.available }}</div>
+      <small class="text-muted">Ready to Admit</small>
+    </div>
+  </div>
+  <div class="col-xl-2 col-md-4 col-sm-6">
+    <div class="card border-0 shadow-sm p-3 h-100">
+      <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem;">Reserved</small>
+      <div class="fw-bold fs-4 text-warning mt-1">{{ metrics.reserved }}</div>
+      <small class="text-muted">Upcoming Surgery</small>
+    </div>
+  </div>
+  <div class="col-xl-2 col-md-4 col-sm-6">
+    <div class="card border-0 shadow-sm p-3 h-100">
+      <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem;">Maintenance</small>
+      <div class="fw-bold fs-4 text-secondary mt-1">{{ metrics.maintenance }}</div>
+      <small class="text-muted">Sanitization / Repair</small>
+    </div>
+  </div>
+  <div class="col-xl-2 col-md-4 col-sm-6">
+    <div class="card border-0 shadow-sm p-3 h-100">
+      <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem;">Occupancy %</small>
+      <div class="fw-bold fs-4 {{ 'text-danger' if metrics.occupancy_pct >= 85 else 'text-dark' }} mt-1">
+        {{ metrics.occupancy_pct }}%
+      </div>
+      <small class="text-muted">Target &lt; 85%</small>
+    </div>
+  </div>
+</div>
+
+<!-- Department Bed Occupancy Progress Bars -->
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-header bg-white">
+    <span class="fw-bold"><i class="bi bi-pie-chart text-primary me-2"></i>Department-wise Bed Occupancy Rates</span>
+  </div>
+  <div class="card-body p-3">
+    <div class="row g-3">
+      {% for d in dept_occupancy %}
+        <div class="col-md-6">
+          <div class="d-flex justify-content-between small fw-semibold mb-1">
+            <span>{{ d.name }}</span>
+            <span class="{{ 'text-danger fw-bold' if d.rate >= 85 else 'text-dark' }}">{{ d.occupied }}/{{ d.total }} ({{ d.rate }}%)</span>
+          </div>
+          <div class="progress" style="height: 8px;">
+            <div class="progress-bar {{ 'bg-danger' if d.rate >= 85 else 'bg-primary' }}" style="width: {{ d.rate }}%;"></div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- Filter Bar -->
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body p-3">
+    <form method="GET" action="{{ url_for('beds.list_beds') }}" class="row g-2 align-items-center">
+      <div class="col-md-4">
+        <select class="form-select form-select-sm" name="type">
+          <option value="">All Bed Types</option>
+          {% for bt in ['General Ward', 'ICU', 'Private Room', 'Emergency', 'Semi-Private'] %}
+            <option value="{{ bt }}" {{ 'selected' if type_filter == bt else '' }}>{{ bt }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <select class="form-select form-select-sm" name="status">
+          <option value="">All Statuses</option>
+          <option value="Available" {{ 'selected' if status_filter == 'Available' else '' }}>Available</option>
+          <option value="Occupied" {{ 'selected' if status_filter == 'Occupied' else '' }}>Occupied</option>
+          <option value="Reserved" {{ 'selected' if status_filter == 'Reserved' else '' }}>Reserved</option>
+          <option value="Maintenance" {{ 'selected' if status_filter == 'Maintenance' else '' }}>Maintenance</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <select class="form-select form-select-sm" name="department_id">
+          <option value="">All Departments</option>
+          {% for d in departments %}
+            <option value="{{ d.id }}" {{ 'selected' if dept_filter == d.id else '' }}>{{ d.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2 d-flex gap-1">
+        <button type="submit" class="btn btn-sm btn-primary w-100">Filter</button>
+        {% if type_filter or status_filter or dept_filter %}
+          <a href="{{ url_for('beds.list_beds') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-x"></i></a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Beds Table -->
+<div class="card border-0 shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Bed ID</th>
+          <th>Bed Number</th>
+          <th>Department</th>
+          <th>Ward / Location</th>
+          <th>Type</th>
+          <th>Occupancy Status</th>
+          <th>Assigned Inpatient</th>
+          <th class="text-end">Update Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in beds %}
+          <tr>
+            <td class="font-monospace fw-semibold text-primary">{{ b.bed_id }}</td>
+            <td class="fw-bold">{{ b.bed_number }}</td>
+            <td>{{ b.department.name }}</td>
+            <td>{{ b.ward }}</td>
+            <td><span class="badge bg-light text-dark border">{{ b.bed_type }}</span></td>
+            <td>
+              <span class="badge {% if b.occupancy_status == 'Available' %}badge-available{% elif b.occupancy_status == 'Occupied' %}badge-occupied{% elif b.occupancy_status == 'Reserved' %}badge-waiting{% else %}badge-leave{% endif %}">
+                {{ b.occupancy_status }}
+              </span>
+            </td>
+            <td>
+              {% if b.current_patient %}
+                <a href="{{ url_for('patients.view_patient', id=b.current_patient.id) }}" class="fw-semibold text-dark text-decoration-none">
+                  <i class="bi bi-person-fill text-danger me-1"></i>{{ b.current_patient.full_name }}
+                </a>
+              {% else %}
+                <span class="text-muted small">None</span>
+              {% endif %}
+            </td>
+            <td class="text-end">
+              {% if b.occupancy_status != 'Occupied' %}
+                <form method="POST" action="{{ url_for('beds.update_status', id=b.id) }}" class="d-inline">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <select name="status" class="form-select form-select-sm d-inline-block py-0 px-2" style="width: auto; font-size: 0.75rem;" onchange="this.form.submit();">
+                    <option value="Available" {{ 'selected' if b.occupancy_status == 'Available' else '' }}>Available</option>
+                    <option value="Reserved" {{ 'selected' if b.occupancy_status == 'Reserved' else '' }}>Reserved</option>
+                    <option value="Maintenance" {{ 'selected' if b.occupancy_status == 'Maintenance' else '' }}>Maintenance</option>
+                  </select>
+                </form>
+              {% else %}
+                <span class="text-muted small">Occupied by Inpatient</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="8" class="text-center text-muted py-5">No beds found matching the filter options.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,30 @@
+{
+  "best_algorithm": "Gradient Boosting Regressor",
+  "features": [
+    "dept_id",
+    "arrival_hour",
+    "day_of_week",
+    "avg_consult_duration",
+    "queue_size",
+    "available_doctors"
+  ],
+  "training_date": "2026-11-04 07:02:43",
+  "metrics": {
+    "Gradient Boosting Regressor": {
+      "mae": 6.16,
+      "rmse": 7.81,
+      "r2_score": 0.534
+    },
+    "Random Forest Regressor": {
+      "mae": 6.11,
+      "rmse": 7.85,
+      "r2_score": 0.529
+    },
+    "Linear Regression": {
+      "mae": 6.46,
+      "rmse": 8.04,
+      "r2_score": 0.507
+    }
+  },
+  "disclaimer": "These predictions are estimates for hospital operational planning and are not guaranteed waiting times or medical advice."
+}

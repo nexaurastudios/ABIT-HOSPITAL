@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Reports &amp; Export - Apex Health{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+  <div>
+    <h4 class="fw-bold text-dark mb-1">Hospital Reports &amp; Data Export Hub</h4>
+    <p class="text-muted small mb-0">Generate, view, and export formatted hospital operational reports in CSV, Excel, and PDF formats.</p>
+  </div>
+  <!-- Export Buttons for the active filtered report -->
+  <div class="btn-group shadow-sm">
+    <a href="{{ url_for('reports.index', type=active_type, department_id=dept_id, days=days, export='csv') }}" class="btn btn-outline-secondary">
+      <i class="bi bi-filetype-csv text-primary me-1"></i>CSV
+    </a>
+    <a href="{{ url_for('reports.index', type=active_type, department_id=dept_id, days=days, export='excel') }}" class="btn btn-outline-secondary">
+      <i class="bi bi-file-earmark-excel text-success me-1"></i>Excel (.xlsx)
+    </a>
+    <a href="{{ url_for('reports.index', type=active_type, department_id=dept_id, days=days, export='pdf') }}" class="btn btn-outline-danger">
+      <i class="bi bi-file-earmark-pdf me-1"></i>PDF Report
+    </a>
+  </div>
+</div>
+
+<!-- Report Selection & Filters Card -->
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body p-3">
+    <form method="GET" action="{{ url_for('reports.index') }}" class="row g-2 align-items-center">
+      <div class="col-md-5">
+        <label class="form-label small fw-semibold text-secondary mb-1">Select Report Topic</label>
+        <select class="form-select form-select-sm" name="type" onchange="this.form.submit();">
+          {% for r_code, r_title in report_definitions %}
+            <option value="{{ r_code }}" {{ 'selected' if active_type == r_code else '' }}>{{ r_title }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label small fw-semibold text-secondary mb-1">Department Scope</label>
+        <select class="form-select form-select-sm" name="department_id" onchange="this.form.submit();">
+          <option value="">All Departments</option>
+          {% for d in departments %}
+            <option value="{{ d.id }}" {{ 'selected' if dept_id == d.id else '' }}>{{ d.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label small fw-semibold text-secondary mb-1">Date Timeframe</label>
+        <select class="form-select form-select-sm" name="days" onchange="this.form.submit();">
+          <option value="7" {{ 'selected' if days == 7 else '' }}>Past 7 Days</option>
+          <option value="30" {{ 'selected' if days == 30 else '' }}>Past 30 Days</option>
+          <option value="90" {{ 'selected' if days == 90 else '' }}>Past 90 Days</option>
+          <option value="365" {{ 'selected' if days == 365 else '' }}>Past 1 Year</option>
+        </select>
+      </div>
+
+      <div class="col-md-2 d-flex align-items-end">
+        <button type="submit" class="btn btn-sm btn-primary w-100">
+          <i class="bi bi-arrow-repeat me-1"></i>Apply Filter
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Report Output Table Card -->
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+    <h5 class="fw-bold text-dark mb-0"><i class="bi bi-table me-2 text-primary"></i>{{ report_title }}</h5>
+    <span class="badge bg-light text-muted border">{{ rows|length }} Records Retrieved</span>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          {% for h in headers %}
+            <th>{{ h }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+          <tr>
+            {% for cell in row %}
+              <td class="small">{{ cell }}</td>
+            {% endfor %}
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="{{ headers|length or 1 }}" class="text-center text-muted py-5">
+              No database records found matching this report criteria.
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+

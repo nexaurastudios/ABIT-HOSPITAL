@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% block title %}Appointments Management - Apex Health{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+  <div>
+    <h4 class="fw-bold text-dark mb-1">Appointment Booking &amp; Scheduling</h4>
+    <p class="text-muted small mb-0">Manage patient consultations, doctor schedules, and clinical queue flow.</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('appointments.calendar_view') }}" class="btn btn-outline-secondary shadow-sm">
+      <i class="bi bi-calendar3 me-1"></i>Calendar View
+    </a>
+    <a href="{{ url_for('appointments.create_appointment') }}" class="btn btn-primary shadow-sm">
+      <i class="bi bi-calendar-plus me-1"></i>New Appointment
+    </a>
+  </div>
+</div>
+
+<!-- Filters Bar -->
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body p-3">
+    <form method="GET" action="{{ url_for('appointments.list_appointments') }}" class="row g-2 align-items-center">
+      <div class="col-md-3">
+        <div class="input-group input-group-sm">
+          <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+          <input type="text" class="form-control border-start-0" name="search" value="{{ search }}" placeholder="Search ID or patient...">
+        </div>
+      </div>
+      <div class="col-md-2">
+        <select class="form-select form-select-sm" name="status">
+          <option value="">All Statuses</option>
+          {% for st in ['Scheduled', 'Confirmed', 'Waiting', 'In Consultation', 'Completed', 'Cancelled', 'No Show'] %}
+            <option value="{{ st }}" {{ 'selected' if status_filter == st else '' }}>{{ st }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <select class="form-select form-select-sm" name="department_id">
+          <option value="">All Departments</option>
+          {% for d in departments %}
+            <option value="{{ d.id }}" {{ 'selected' if dept_filter == d.id else '' }}>{{ d.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <input type="date" class="form-control form-control-sm" name="date" value="{{ date_filter }}">
+      </div>
+      <div class="col-md-2 d-flex gap-1">
+        <button type="submit" class="btn btn-sm btn-primary w-100">Filter</button>
+        {% if search or status_filter or dept_filter or date_filter %}
+          <a href="{{ url_for('appointments.list_appointments') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-x"></i></a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Appointments Table Card -->
+<div class="card border-0 shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Appt ID</th>
+          <th>Patient</th>
+          <th>Doctor</th>
+          <th>Department</th>
+          <th>Date &amp; Time</th>
+          <th>Status</th>
+          <th>Reason</th>
+          <th class="text-end">Manage Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in appointments %}
+          <tr>
+            <td class="font-monospace fw-semibold text-primary">{{ a.appointment_id }}</td>
+            <td>
+              <a href="{{ url_for('patients.view_patient', id=a.patient_id) }}" class="fw-bold text-dark text-decoration-none">
+                {{ a.patient.full_name }}
+              </a>
+              <div class="small text-muted font-monospace">{{ a.patient.patient_id }}</div>
+            </td>
+            <td>
+              <a href="{{ url_for('doctors.view_doctor', id=a.doctor_id) }}" class="text-dark text-decoration-none">
+                Dr. {{ a.doctor.name }}
+              </a>
+            </td>
+            <td>{{ a.department.name }}</td>
+            <td>
+              <div class="fw-semibold text-dark">{{ a.appointment_date.strftime('%Y-%m-%d') }}</div>
+              <small class="text-muted">{{ a.appointment_time.strftime('%H:%M') }}</small>
+            </td>
+            <td>
+              <span class="badge {% if a.status == 'Completed' %}badge-available{% elif a.status == 'In Consultation' %}badge-consulting{% elif a.status == 'Waiting' %}badge-waiting{% elif a.status in ['Cancelled', 'No Show'] %}badge-occupied{% else %}badge-scheduled{% endif %}">
+                {{ a.status }}
+              </span>
+            </td>
+            <td class="small text-muted">{{ a.reason or 'Consultation' }}</td>
+            <td class="text-end">
+              <!-- Inline Workflow Status Stepper Form -->
+              <form method="POST" action="{{ url_for('appointments.update_status', id=a.id) }}" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                {% if a.status in ['Scheduled', 'Confirmed'] %}
+                  <input type="hidden" name="status" value="Waiting">
+                  <button type="submit" class="btn btn-xs btn-outline-warning py-0 px-2" style="font-size: 0.75rem;" title="Record patient arrival and start waiting timer">
+                    <i class="bi bi-bell me-1"></i>Arrived
+                  </button>
+                {% elif a.status == 'Waiting' %}
+                  <input type="hidden" name="status" value="In Consultation">
+                  <button type="submit" class="btn btn-xs btn-outline-primary py-0 px-2" style="font-size: 0.75rem;" title="Start doctor consultation">
+                    <i class="bi bi-play-fill me-1"></i>Consult
+                  </button>
+                {% elif a.status == 'In Consultation' %}
+                  <input type="hidden" name="status" value="Completed">
+                  <button type="submit" class="btn btn-xs btn-outline-success py-0 px-2" style="font-size: 0.75rem;" title="Complete visit">
+                    <i class="bi bi-check-lg me-1"></i>Finish
+                  </button>
+                {% else %}
+                  <span class="text-muted small">&bull;</span>
+                {% endif %}
+              </form>
+
+              {% if a.status not in ['Completed', 'Cancelled'] %}
+                <form method="POST" action="{{ url_for('appointments.cancel_appointment', id=a.id) }}" class="d-inline ms-1" onsubmit="return confirm('Cancel this appointment?');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="btn btn-xs btn-link text-danger p-0" title="Cancel Appointment">
+                    <i class="bi bi-x-circle"></i>
+                  </button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="8" class="text-center text-muted py-5">
+              <i class="bi bi-calendar2-x fs-1 text-secondary opacity-50 d-block mb-2"></i>
+              No appointments found for the selected filter parameters.
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  {% if pagination.pages > 1 %}
+    <div class="card-footer bg-white d-flex justify-content-between align-items-center py-3">
+      <small class="text-muted">Showing page {{ pagination.page }} of {{ pagination.pages }} ({{ pagination.total }} total appointments)</small>
+      <nav>
+        <ul class="pagination pagination-sm mb-0">
+          {% if pagination.has_prev %}
+            <li class="page-item">
+              <a class="page-link" href="{{ url_for('appointments.list_appointments', page=pagination.prev_num, search=search, status=status_filter, department_id=dept_filter, date=date_filter) }}">Previous</a>
+            </li>
+          {% endif %}
+          <li class="page-item active"><span class="page-link">{{ pagination.page }}</span></li>
+          {% if pagination.has_next %}
+            <li class="page-item">
+              <a class="page-link" href="{{ url_for('appointments.list_appointments', page=pagination.next_num, search=search, status=status_filter, department_id=dept_filter, date=date_filter) }}">Next</a>
+            </li>
+          {% endif %}
+        </ul>
+      </nav>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
+

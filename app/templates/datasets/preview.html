@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Dataset Validation Preview - Apex Health{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+  <div>
+    <h4 class="fw-bold text-dark mb-1">CSV Dataset Validation &amp; Schema Check</h4>
+    <p class="text-muted small mb-0">Inspecting uploaded file: <span class="font-monospace text-primary fw-bold">{{ filename }}</span></p>
+  </div>
+  <a href="{{ url_for('datasets.index') }}" class="btn btn-outline-secondary shadow-sm">
+    <i class="bi bi-arrow-left me-1"></i>Back to Datasets
+  </a>
+</div>
+
+<!-- Validation Metrics Summary -->
+<div class="row g-3 mb-4">
+  <div class="col-md-3 col-sm-6">
+    <div class="card border-0 shadow-sm p-3">
+      <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem;">Total Rows</small>
+      <div class="fw-bold fs-4 text-dark mt-1">{{ total_rows }}</div>
+      <small class="text-muted">Detected in CSV</small>
+    </div>
+  </div>
+  <div class="col-md-3 col-sm-6">
+    <div class="card border-0 shadow-sm p-3">
+      <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem;">Missing Columns</small>
+      <div class="fw-bold fs-4 {{ 'text-danger' if missing_cols else 'text-success' }} mt-1">
+        {{ missing_cols|length }}
+      </div>
+      <small class="text-muted">{{ 'Missing required fields' if missing_cols else 'All required columns match' }}</small>
+    </div>
+  </div>
+  <div class="col-md-3 col-sm-6">
+    <div class="card border-0 shadow-sm p-3">
+      <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem;">Null / Empty Values</small>
+      <div class="fw-bold fs-4 {{ 'text-warning' if missing_values > 0 else 'text-success' }} mt-1">
+        {{ missing_values }}
+      </div>
+      <small class="text-muted">Cells with missing data</small>
+    </div>
+  </div>
+  <div class="col-md-3 col-sm-6">
+    <div class="card border-0 shadow-sm p-3">
+      <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem;">Duplicate Rows</small>
+      <div class="fw-bold fs-4 {{ 'text-warning' if duplicates > 0 else 'text-success' }} mt-1">
+        {{ duplicates }}
+      </div>
+      <small class="text-muted">Identical records</small>
+    </div>
+  </div>
+</div>
+
+{% if missing_cols %}
+  <div class="alert alert-danger shadow-sm mb-4">
+    <h6 class="fw-bold mb-1"><i class="bi bi-x-octagon-fill me-2"></i>Schema Validation Failed</h6>
+    The CSV file is missing required columns for category <strong>{{ dataset_type }}</strong>:
+    <ul class="mb-0 mt-2">
+      {% for mc in missing_cols %}
+        <li><code>{{ mc }}</code></li>
+      {% endfor %}
+    </ul>
+  </div>
+{% else %}
+  <div class="alert alert-success shadow-sm mb-4">
+    <i class="bi bi-check-circle-fill me-2"></i>
+    <strong>Schema Validated:</strong> All required columns for <strong>{{ dataset_type }}</strong> were found.
+  </div>
+{% endif %}
+
+<!-- Preview Data Table -->
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+    <h5 class="fw-bold text-dark mb-0">First 10 Rows Preview</h5>
+    <span class="badge bg-light text-muted border">Sample View</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          {% for col in columns %}
+            <th>{{ col }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in preview_rows %}
+          <tr>
+            {% for col in columns %}
+              <td class="small">{{ row[col] }}</td>
+            {% endfor %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Import Confirmation Form -->
+{% if is_valid %}
+  <div class="d-flex justify-content-end gap-2">
+    <a href="{{ url_for('datasets.index') }}" class="btn btn-outline-secondary">Discard</a>
+    <form method="POST" action="{{ url_for('datasets.commit_import') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="temp_path" value="{{ temp_path }}">
+      <input type="hidden" name="dataset_type" value="{{ dataset_type }}">
+      <input type="hidden" name="filename" value="{{ filename }}">
+      <button type="submit" class="btn btn-success px-4 shadow-sm">
+        <i class="bi bi-database-add me-1"></i>Confirm Import {{ total_rows }} Records into MySQL
+      </button>
+    </form>
+  </div>
+{% endif %}
+{% endblock %}
+

@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block title %}Patient Directory - Apex Health{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+  <div>
+    <h4 class="fw-bold text-dark mb-1">Patient Management Directory</h4>
+    <p class="text-muted small mb-0">Search, filter, view profiles, and manage patient registration records.</p>
+  </div>
+  <a href="{{ url_for('patients.create_patient') }}" class="btn btn-primary shadow-sm">
+    <i class="bi bi-person-plus me-1"></i>Register New Patient
+  </a>
+</div>
+
+<!-- Search and Filters Card -->
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body p-3">
+    <form method="GET" action="{{ url_for('patients.list_patients') }}" class="row g-2 align-items-center">
+      <div class="col-md-4">
+        <div class="input-group input-group-sm">
+          <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+          <input type="text" class="form-control border-start-0" name="search" value="{{ search }}" placeholder="Search by name, ID, or phone...">
+        </div>
+      </div>
+      <div class="col-md-2">
+        <select class="form-select form-select-sm" name="status">
+          <option value="">All Statuses</option>
+          <option value="Outpatient" {{ 'selected' if status_filter == 'Outpatient' else '' }}>Outpatient</option>
+          <option value="Admitted" {{ 'selected' if status_filter == 'Admitted' else '' }}>Admitted</option>
+          <option value="Discharged" {{ 'selected' if status_filter == 'Discharged' else '' }}>Discharged</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <select class="form-select form-select-sm" name="gender">
+          <option value="">All Genders</option>
+          <option value="Male" {{ 'selected' if gender_filter == 'Male' else '' }}>Male</option>
+          <option value="Female" {{ 'selected' if gender_filter == 'Female' else '' }}>Female</option>
+          <option value="Other" {{ 'selected' if gender_filter == 'Other' else '' }}>Other</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <select class="form-select form-select-sm" name="department_id">
+          <option value="">All Assigned Departments</option>
+          {% for d in departments %}
+            <option value="{{ d.id }}" {{ 'selected' if dept_filter == d.id else '' }}>{{ d.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-1 d-flex gap-1">
+        <button type="submit" class="btn btn-sm btn-primary w-100">Filter</button>
+        {% if search or status_filter or gender_filter or dept_filter %}
+          <a href="{{ url_for('patients.list_patients') }}" class="btn btn-sm btn-outline-secondary" title="Reset Filters"><i class="bi bi-x"></i></a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Patients Table Card -->
+<div class="card border-0 shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Patient ID</th>
+          <th>Full Name</th>
+          <th>Age / Gender</th>
+          <th>Contact Phone</th>
+          <th>Blood Group</th>
+          <th>Department</th>
+          <th>Status</th>
+          <th>Reg. Date</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in patients %}
+          <tr>
+            <td class="fw-semibold text-primary font-monospace">{{ p.patient_id }}</td>
+            <td>
+              <a href="{{ url_for('patients.view_patient', id=p.id) }}" class="text-dark fw-bold text-decoration-none">
+                {{ p.full_name }}
+              </a>
+              {% if p.is_demo %}
+                <span class="badge bg-light text-secondary border ms-1" style="font-size: 0.65rem;">DEMO</span>
+              {% endif %}
+            </td>
+            <td>{{ p.age }} yrs / {{ p.gender }}</td>
+            <td>{{ p.phone }}</td>
+            <td><span class="badge bg-light text-dark border">{{ p.blood_group }}</span></td>
+            <td>{{ p.assigned_department.name if p.assigned_department else '<span class="text-muted">Unassigned</span>'|safe }}</td>
+            <td>
+              <span class="badge {% if p.status == 'Admitted' %}badge-occupied{% elif p.status == 'Discharged' %}badge-available{% else %}badge-scheduled{% endif %}">
+                {{ p.status }}
+              </span>
+            </td>
+            <td class="small text-muted">{{ p.registration_date.strftime('%Y-%m-%d') if p.registration_date else '' }}</td>
+            <td class="text-end">
+              <a href="{{ url_for('patients.view_patient', id=p.id) }}" class="btn btn-sm btn-light border py-1 px-2" title="View Profile">
+                <i class="bi bi-eye text-primary"></i>
+              </a>
+              <a href="{{ url_for('patients.edit_patient', id=p.id) }}" class="btn btn-sm btn-light border py-1 px-2" title="Edit Patient">
+                <i class="bi bi-pencil text-secondary"></i>
+              </a>
+            </td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="9" class="text-center text-muted py-5">
+              <i class="bi bi-people fs-1 text-secondary opacity-50 d-block mb-2"></i>
+              No patient records matched the search criteria.
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  {% if pagination.pages > 1 %}
+    <div class="card-footer bg-white d-flex justify-content-between align-items-center py-3">
+      <small class="text-muted">
+        Showing {{ ((pagination.page - 1) * pagination.per_page) + 1 }} to {{ pagination.page * pagination.per_page if (pagination.page * pagination.per_page) < pagination.total else pagination.total }} of {{ pagination.total }} patients
+      </small>
+      <nav>
+        <ul class="pagination pagination-sm mb-0">
+          {% if pagination.has_prev %}
+            <li class="page-item">
+              <a class="page-link" href="{{ url_for('patients.list_patients', page=pagination.prev_num, search=search, status=status_filter, gender=gender_filter, department_id=dept_filter) }}">Previous</a>
+            </li>
+          {% endif %}
+          <li class="page-item active"><span class="page-link">{{ pagination.page }} of {{ pagination.pages }}</span></li>
+          {% if pagination.has_next %}
+            <li class="page-item">
+              <a class="page-link" href="{{ url_for('patients.list_patients', page=pagination.next_num, search=search, status=status_filter, gender=gender_filter, department_id=dept_filter) }}">Next</a>
+            </li>
+          {% endif %}
+        </ul>
+      </nav>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
+
